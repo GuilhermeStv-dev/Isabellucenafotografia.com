@@ -8,10 +8,10 @@ const outDir = path.resolve(root, 'optimized');
 const files = [
   'foto-isabel.jpeg',
   'Foto-isabel-2.JPG',
-  'Foto-isabel3.png',
-  'Foto-Isabel4.png',
+  'Foto-isabel3.webp',
+  'Foto-Isabel4.webp',
   'foto-gravida1.jpg',
-  'trabalho-container.png',
+  'trabalho-container.webp',
 ];
 
 const widths = [640, 1024, 1600];

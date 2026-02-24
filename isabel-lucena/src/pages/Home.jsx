@@ -2,26 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useGallery } from '../context/GalleryContext';
 import { getResponsiveImageSources } from '../lib/imageOptimization';
-import FotoIsabel640 from '../assets/optimized/foto-isabel-640.webp';
-import FotoIsabel1024 from '../assets/optimized/foto-isabel-1024.webp';
-import FotoIsabel1600 from '../assets/optimized/foto-isabel-1600.webp';
-import FotoIsabelFallback from '../assets/optimized/foto-isabel-1600.jpg';
-import FotoIsabel2640 from '../assets/optimized/foto-isabel-2-640.webp';
-import FotoIsabel21024 from '../assets/optimized/foto-isabel-2-1024.webp';
-import FotoIsabel21600 from '../assets/optimized/foto-isabel-2-1600.webp';
-import FotoIsabel2Fallback from '../assets/optimized/foto-isabel-2-1600.jpg';
-import FotoIsabel3640 from '../assets/optimized/foto-isabel3-640.webp';
-import FotoIsabel31024 from '../assets/optimized/foto-isabel3-1024.webp';
-import FotoIsabel31600 from '../assets/optimized/foto-isabel3-1600.webp';
-import FotoIsabel3Fallback from '../assets/optimized/foto-isabel3-1600.jpg';
-import FotoIsabel4640 from '../assets/optimized/foto-isabel4-640.webp';
-import FotoIsabel41024 from '../assets/optimized/foto-isabel4-1024.webp';
-import FotoIsabel41600 from '../assets/optimized/foto-isabel4-1600.webp';
-import FotoIsabel4Fallback from '../assets/optimized/foto-isabel4-1600.jpg';
-import FotoGravida1640 from '../assets/optimized/foto-gravida1-640.webp';
-import FotoGravida11024 from '../assets/optimized/foto-gravida1-1024.webp';
-import FotoGravida11600 from '../assets/optimized/foto-gravida1-1600.webp';
-import FotoGravida1Fallback from '../assets/optimized/foto-gravida1-1600.jpg';
+import FotoIsabel from '../assets/foto-isabel.webp';
+import FotoIsabel2 from '../assets/Foto-isabel-2.webp';
+import FotoIsabel3 from '../assets/Foto-isabel3.webp';
+import FotoIsabel4 from '../assets/Foto-Isabel4.webp';
+import FotoGravida1 from '../assets/foto-gravida1.webp';
 
 /* ─────────────────────────────────────────────
    HOOK — Revela elementos ao entrar no viewport
@@ -103,12 +88,6 @@ const BLOG_POSTS = [
   { id: 3, src: '', category: 'Casamento', title: 'Como criar um álbum de casamento único', date: 'Mar 2025', href: '/blog/album-casamento' },
 ];
 
-const HERO_SRCSET = `${FotoIsabel640} 640w, ${FotoIsabel1024} 1024w, ${FotoIsabel1600} 1600w`;
-const HERO_SIDE_SRCSET = `${FotoIsabel2640} 640w, ${FotoIsabel21024} 1024w, ${FotoIsabel21600} 1600w`;
-const ABOUT_MAIN_SRCSET = `${FotoIsabel3640} 640w, ${FotoIsabel31024} 1024w, ${FotoIsabel31600} 1600w`;
-const ABOUT_SECOND_SRCSET = `${FotoIsabel4640} 640w, ${FotoIsabel41024} 1024w, ${FotoIsabel41600} 1600w`;
-const CTA_SRCSET = `${FotoGravida1640} 640w, ${FotoGravida11024} 1024w, ${FotoGravida11600} 1600w`;
-
 /* ─────────────────────────────────────────────
    SUB-COMPONENTES
 ───────────────────────────────────────────── */
@@ -182,10 +161,7 @@ export default function Home() {
 
         {/* Foto de fundo hero */}
         <div className="absolute inset-0">
-          <picture>
-            <source srcSet={HERO_SRCSET} sizes="100vw" type="image/webp" />
-            <img src={FotoIsabelFallback} className="w-full h-full object-cover" alt="Isabel Lucena" loading="eager" fetchPriority="high" decoding="async" />
-          </picture>
+          <img src={FotoIsabel} className="w-full h-full object-cover" alt="Isabel Lucena" loading="eager" fetchPriority="high" decoding="async" />
         </div>
 
         {/* Conteúdo */}
@@ -233,10 +209,7 @@ export default function Home() {
           >
             <div className="relative w-[360px] ml-auto">
               <div className="w-full aspect-[3/4] rounded-2xl overflow-hidden border border-gold/15 shadow-[0_20px_80px_rgba(0,0,0,0.6)]">
-                <picture>
-                  <source srcSet={HERO_SIDE_SRCSET} sizes="(min-width: 768px) 360px, 100vw" type="image/webp" />
-                  <img src={FotoIsabel2Fallback} className="w-full h-full object-cover" alt="Isabel Lucena" loading="lazy" decoding="async" />
-                </picture>
+                <img src={FotoIsabel2} className="w-full h-full object-cover" alt="Isabel Lucena" loading="lazy" decoding="async" />
               </div>
               {/* Badge flutuante */}
               <div className="absolute -bottom-5 -left-8 bg-gold text-dark px-5 py-3 rounded-xl shadow-xl">
@@ -342,17 +315,11 @@ export default function Home() {
           <div className="reveal relative h-[520px]">
             {/* Foto principal */}
             <div className="absolute left-0 top-0 w-[72%] aspect-square rounded-2xl overflow-hidden border border-gold/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-              <picture>
-                <source srcSet={ABOUT_MAIN_SRCSET} sizes="(min-width: 768px) 45vw, 90vw" type="image/webp" />
-                <img src={FotoIsabel3Fallback} alt="Isabel Lucena" className="w-full h-full object-cover object-top" loading="lazy" decoding="async" />
-              </picture>
+              <img src={FotoIsabel3} alt="Isabel Lucena" className="w-full h-full object-cover object-top" loading="lazy" decoding="async" />
             </div>
             {/* Foto secundária — sobreposta */}
             <div className="absolute right-0 bottom-0 w-[55%] aspect-[4/5] rounded-2xl overflow-hidden border border-gold/20 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-              <picture>
-                <source srcSet={ABOUT_SECOND_SRCSET} sizes="(min-width: 768px) 35vw, 80vw" type="image/webp" />
-                <img src={FotoIsabel4Fallback} alt="Isabel Lucena" className="w-full h-full object-cover" loading="lazy" decoding="async" />
-              </picture>
+              <img src={FotoIsabel4} alt="Isabel Lucena" className="w-full h-full object-cover" loading="lazy" decoding="async" />
             </div>
             {/* Detalhe decorativo */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full border border-gold/30 pointer-events-none" />
@@ -632,10 +599,7 @@ export default function Home() {
       ══════════════════════════════════════════════════ */}
       <section className="snap-section relative py-28 bg-dark-100 overflow-hidden">
         <div className="absolute inset-0">
-          <picture>
-            <source srcSet={CTA_SRCSET} sizes="100vw" type="image/webp" />
-            <img src={FotoGravida1Fallback} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
-          </picture>
+          <img src={FotoGravida1} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
           <div className="absolute inset-0 bg-gradient-to-r from-dark/90 via-dark/70 to-dark/60" />
         </div>
         <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">

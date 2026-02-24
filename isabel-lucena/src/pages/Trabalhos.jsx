@@ -3,12 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
-import trabalhoContainer640 from '../assets/optimized/trabalho-container-640.webp'
-import trabalhoContainer1024 from '../assets/optimized/trabalho-container-1024.webp'
-import trabalhoContainer1600 from '../assets/optimized/trabalho-container-1600.webp'
-import trabalhoContainerFallback from '../assets/optimized/trabalho-container-1600.jpg'
-
-const HERO_WORKS_SRCSET = `${trabalhoContainer640} 640w, ${trabalhoContainer1024} 1024w, ${trabalhoContainer1600} 1600w`
+import trabalhoContainer from '../assets/trabalho-container.webp'
 
 const TAGS = ['Todos', 'Ensaios', 'Grávidas', 'Infantil', 'Wedding', 'Eventos']
 
@@ -24,10 +19,7 @@ export default function Trabalhos() {
     <div className="bg-dark min-h-screen">
       {/* ── Hero ── */}
       <section className="relative h-[45vh] md:h-[55vh] flex items-end overflow-hidden">
-        <picture className="absolute inset-0">
-          <source srcSet={HERO_WORKS_SRCSET} sizes="100vw" type="image/webp" />
-          <img src={trabalhoContainerFallback} alt="" className="absolute inset-0 w-full h-full object-cover opacity-50" loading="eager" fetchPriority="high" decoding="async" />
-        </picture>
+        <img src={trabalhoContainer} alt="" className="absolute inset-0 w-full h-full object-cover opacity-50" loading="eager" fetchPriority="high" decoding="async" />
         <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/50 to-transparent" />
         <div className="relative z-10 max-w-7xl mx-auto px-6 pb-12 w-full">
           <h1 className="font-display text-4xl md:text-5xl italic">

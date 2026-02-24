@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
-import LogoBranca from '../assets/Logo-horzontal-branca.png';
-import LogoPreta from '../assets/Logo-horzontal-preta.png';
+import LogoBranca from '../assets/Logo-horzontal-branca.webp';
+import LogoPreta from '../assets/Logo-horzontal-preta.webp';
 
 const TikTokIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
