@@ -1,71 +1,34 @@
 // src/lib/supabase.js
-// ─────────────────────────────────────────────────────
-// Substitua os valores abaixo pelos do seu projeto Supabase
-// Você encontra em: supabase.com → seu projeto → Settings → API
-// ─────────────────────────────────────────────────────
-
 import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;  // ← cole aqui
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ─── Helpers de Storage ───────────────────────────────
+// ─── Nome do bucket (deve ser igual ao criado no Supabase) ───
+const BUCKET = 'Fotos';
 
 /** Faz upload de um arquivo e retorna a URL pública */
-// ensure bucket exists before trying to upload
-let _bucketChecked = false;
-async function ensureBucketExists(bucketName) {
-  if (_bucketChecked) return;
-  const { data: buckets, error } = await supabase.storage.listBuckets();
-  if (error) {
-    console.error('could not list buckets', error);
-    // if we can't list we have no permissions; bail out quietly
-    return;
-  }
-  if (!buckets.find((b) => b.name === bucketName)) {
-    try {
-      const { data: created, error: createErr } = await supabase.storage.createBucket(bucketName, { public: true });
-      if (createErr) {
-        // permission issue or RLS prevents creation, just log warning
-        console.warn('unable to auto-create bucket, please create it manually', bucketName, createErr);
-      } else {
-        console.log('bucket created', bucketName, created);
-      }
-    } catch (err) {
-      console.warn('error while auto-creating bucket', bucketName, err);
-    }
-  }
-  _bucketChecked = true;
-}
-
 export async function uploadFoto(file, categoria) {
-  // make sure storage bucket is ready (run once per session)
-  await ensureBucketExists('fotos');
-
   const ext = file.name.split('.').pop();
-  // generate a more robust unique name to avoid collisions
-  const nome = `${categoria}/${Date.now()}-${Math.floor(Math.random()*1e6)}.${ext}`;
+  const nome = `${categoria}/${Date.now()}-${Math.floor(Math.random() * 1e6)}.${ext}`;
 
   const { data, error } = await supabase.storage
-    .from('fotos')
-    // allow upsert so repeated uploads with same name don't blow up
+    .from(BUCKET)
     .upload(nome, file, { cacheControl: '3600', upsert: true });
 
   if (error) {
     console.error('upload failed', { nome, error });
     throw error;
   }
-  console.log('upload succeeded', { nome, data });
 
-  return supabase.storage.from('fotos').getPublicUrl(nome).data.publicUrl;
+  return supabase.storage.from(BUCKET).getPublicUrl(nome).data.publicUrl;
 }
 
 /** Deleta uma foto do Storage pela URL pública */
 export async function deleteFotoStorage(url) {
-  // Extrai o path relativo da URL pública
-  const path = url.split('/fotos/')[1];
+  const path = url.split(`/${BUCKET}/`)[1];
   if (!path) return;
-  await supabase.storage.from('fotos').remove([path]);
+  await supabase.storage.from(BUCKET).remove([path]);
 }
