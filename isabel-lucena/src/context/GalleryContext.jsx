@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
 // ── Default data (placeholders — client replaces via dashboard) ──
 const DEFAULT_CATEGORIES = [
@@ -19,6 +20,15 @@ const DEFAULT_PHOTOS = {
   'aniversarios': [],
   'infantil': [],
   'gravidas': [],
+}
+
+const getTagFromSlug = (slug = '', nome = '') => {
+  const text = `${slug} ${nome}`.toLowerCase()
+  if (text.includes('grav')) return 'Grávidas'
+  if (text.includes('infan') || text.includes('crianc')) return 'Infantil'
+  if (text.includes('casa') || text.includes('wedd')) return 'Wedding'
+  if (text.includes('event') || text.includes('batiz') || text.includes('anivers')) return 'Eventos'
+  return 'Ensaios'
 }
 
 const GalleryContext = createContext(null)
@@ -45,6 +55,62 @@ export function GalleryProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('il_photos', JSON.stringify(photos))
   }, [photos])
+
+  useEffect(() => {
+    let ativo = true
+
+    const syncFromSupabase = async () => {
+      const { data: categoriasDb, error: erroCategorias } = await supabase
+        .from('categorias')
+        .select('nome, slug, ativo')
+        .eq('ativo', true)
+        .order('nome')
+
+      if (erroCategorias || !categoriasDb) return
+
+      const categoriasMapeadas = categoriasDb.map((cat) => ({
+        id: cat.slug,
+        label: cat.nome,
+        tag: getTagFromSlug(cat.slug, cat.nome),
+      }))
+
+      const slugs = categoriasMapeadas.map((cat) => cat.id)
+      const baseFotos = Object.fromEntries(slugs.map((slug) => [slug, []]))
+
+      let fotosPorCategoria = baseFotos
+
+      if (slugs.length > 0) {
+        const { data: fotosDb, error: erroFotos } = await supabase
+          .from('fotos')
+          .select('id, categoria_slug, url, ativo')
+          .eq('ativo', true)
+          .in('categoria_slug', slugs)
+          .order('created_at', { ascending: false })
+
+        if (!erroFotos && fotosDb) {
+          fotosPorCategoria = fotosDb.reduce((acc, foto) => {
+            const categoria = foto.categoria_slug
+            if (!acc[categoria]) acc[categoria] = []
+            acc[categoria].push({
+              id: String(foto.id),
+              url: foto.url,
+              views: 0,
+              likes: 0,
+            })
+            return acc
+          }, { ...baseFotos })
+        }
+      }
+
+      if (ativo) {
+        setCategories(categoriasMapeadas)
+        setPhotos(fotosPorCategoria)
+      }
+    }
+
+    syncFromSupabase()
+    return () => { ativo = false }
+  }, [])
 
   // ── Category CRUD ──
   const addCategory = (cat) => setCategories(prev => [...prev, cat])
