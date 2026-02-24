@@ -61,7 +61,7 @@ export default function Header() {
                 <img
                   src={isDashboard ? LogoPreta : LogoBranca}
                   alt="Isabel Lucena"
-                  className="h-8 w-auto object-contain"
+                  className="h-10 w-auto object-contain"
                 />
               );
             })()}

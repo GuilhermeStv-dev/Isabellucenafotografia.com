@@ -1,5 +1,7 @@
 // src/App.jsx
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Lenis from 'lenis';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
@@ -15,6 +17,35 @@ const PlaceholderPage = ({ title }) => (
 
 // Layout do site público (com Header, Footer e WhatsApp)
 function SiteLayout() {
+  useEffect(() => {
+    const easeInOutCubic = (t) => (t < 0.5
+      ? 4 * t * t * t
+      : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+    const lenis = new Lenis({
+      duration: 1.05,
+      easing: easeInOutCubic,
+      smoothWheel: true,
+      smoothTouch: false,
+      wheelMultiplier: 1.1,
+    });
+
+    window.__lenis = lenis;
+
+    let rafId;
+    const raf = (time) => {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    };
+    rafId = requestAnimationFrame(raf);
+
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      lenis.destroy();
+      window.__lenis = null;
+    };
+  }, []);
+
   return (
     <>
       <Header />

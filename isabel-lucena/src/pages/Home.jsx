@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { gsap } from 'gsap';
+import { ScrollToPlugin } from 'gsap/ScrollToPlugin';
+import FotoIsabel from '../assets/foto-isabel.jpeg';
+import FotoIsabel2 from '../assets/Foto-isabel-2.JPG';
+import FotoIsabel3 from '../assets/Foto-isabel3.png';
+import FotoIsabel4 from '../assets/Foto-Isabel4.png';
+import FotoGravida1 from '../assets/foto-gravida1.jpg';
 
 /* ─────────────────────────────────────────────
    HOOK — Revela elementos ao entrar no viewport
@@ -14,6 +21,8 @@ function useReveal() {
     return () => observer.disconnect();
   }, []);
 }
+
+gsap.registerPlugin(ScrollToPlugin);
 
 /* ─────────────────────────────────────────────
    DADOS — Altere aqui os textos / imagens
@@ -120,8 +129,42 @@ export default function Home() {
   useReveal();
   const [activeService, setActiveService] = useState(0);
 
-  const scrollTo = (id) =>
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add('snap-scroll');
+    document.body.classList.add('snap-scroll');
+    return () => {
+      root.classList.remove('snap-scroll');
+      document.body.classList.remove('snap-scroll');
+    };
+  }, []);
+
+  const scrollTo = (id) => {
+    const target = document.getElementById(id);
+    if (!target) return;
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      target.scrollIntoView({ behavior: 'auto' });
+      return;
+    }
+
+    const lenis = window.__lenis;
+    if (lenis?.scrollTo) {
+      lenis.scrollTo(target, {
+        duration: 1.6,
+        easing: (t) => (t < 0.5
+          ? 4 * t * t * t
+          : 1 - Math.pow(-2 * t + 2, 3) / 2),
+      });
+      return;
+    }
+
+    gsap.to(window, {
+      duration: 1.4,
+      ease: 'power3.inOut',
+      scrollTo: { y: target, autoKill: true },
+    });
+  };
 
   return (
     <main className="overflow-x-hidden">
@@ -131,17 +174,15 @@ export default function Home() {
       ══════════════════════════════════════════════════ */}
       <section
         id="hero"
-        className="relative min-h-screen flex items-center overflow-hidden"
+        className="snap-section relative min-h-screen flex items-center overflow-hidden"
         style={{ background: 'linear-gradient(135deg,#0f0f0f 0%,#1a1509 60%,#0f0f0f 100%)' }}
       >
         {/* Overlay gradiente sobre imagem */}
         <div className="absolute inset-0 bg-gradient-to-r from-dark via-dark/70 to-dark/10 z-10" />
 
-        {/* Foto de fundo hero — substitua o placeholder por:
-            <img src="/hero.jpg" className="absolute inset-0 w-full h-full object-cover" alt="" />
-        */}
+        {/* Foto de fundo hero */}
         <div className="absolute inset-0">
-          <Img src="/isabel-lucena/src/assets/foto-isabel.jpeg" className="w-full h-full" icon="📸" />
+          <img src={FotoIsabel} className="w-full h-full object-cover" alt="Isabel Lucena" />
         </div>
 
         {/* Conteúdo */}
@@ -189,7 +230,7 @@ export default function Home() {
           >
             <div className="relative w-[360px] ml-auto">
               <div className="w-full aspect-[3/4] rounded-2xl overflow-hidden border border-gold/15 shadow-[0_20px_80px_rgba(0,0,0,0.6)]">
-                <ImgPlaceholder className="w-full h-full" />
+                <img src={FotoIsabel2} className="w-full h-full object-cover" alt="Isabel Lucena" />
               </div>
               {/* Badge flutuante */}
               <div className="absolute -bottom-5 -left-8 bg-gold text-dark px-5 py-3 rounded-xl shadow-xl">
@@ -218,7 +259,7 @@ export default function Home() {
       {/* ══════════════════════════════════════════════════
           2 · MEUS TRABALHOS
       ══════════════════════════════════════════════════ */}
-      <section id="meus-trabalhos" className="py-28 bg-dark-100">
+      <section id="meus-trabalhos" className="snap-section py-28 bg-dark-100">
         <div className="max-w-6xl mx-auto px-6">
 
           {/* Header da seção */}
@@ -259,18 +300,18 @@ export default function Home() {
       {/* ══════════════════════════════════════════════════
           3 · OLÁ, SOU ISABEL LUCENA
       ══════════════════════════════════════════════════ */}
-      <section id="sobre" className="py-28 bg-dark">
+      <section id="sobre" className="snap-section py-28 bg-dark">
         <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
 
           {/* Fotos — composição com 2 imagens sobrepostas */}
           <div className="reveal relative h-[520px]">
             {/* Foto principal */}
             <div className="absolute left-0 top-0 w-[72%] aspect-square rounded-2xl overflow-hidden border border-gold/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-              <ImgPlaceholder className="w-full h-full" />
+              <img src={FotoIsabel3} alt="Isabel Lucena" className="w-full h-full object-cover object-top" />
             </div>
             {/* Foto secundária — sobreposta */}
             <div className="absolute right-0 bottom-0 w-[55%] aspect-[4/5] rounded-2xl overflow-hidden border border-gold/20 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-              <ImgPlaceholder className="w-full h-full" />
+              <img src={FotoIsabel4} alt="Isabel Lucena" className="w-full h-full object-cover" />
             </div>
             {/* Detalhe decorativo */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full border border-gold/30 pointer-events-none" />
@@ -326,7 +367,7 @@ export default function Home() {
       {/* ══════════════════════════════════════════════════
           4 · MEUS SERVIÇOS
       ══════════════════════════════════════════════════ */}
-      <section id="servicos" className="py-28 bg-dark-100">
+      <section id="servicos" className="snap-section py-28 bg-dark-100">
         <div className="max-w-6xl mx-auto px-6">
 
           <div className="reveal mb-14 text-center">
@@ -400,7 +441,7 @@ export default function Home() {
       {/* ══════════════════════════════════════════════════
           5 · TRABALHOS EM DESTAQUE
       ══════════════════════════════════════════════════ */}
-      <section id="destaques" className="py-28 bg-dark">
+      <section id="destaques" className="snap-section py-28 bg-dark">
         <div className="max-w-6xl mx-auto px-6">
 
           <div className="reveal flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-14">
@@ -449,7 +490,7 @@ export default function Home() {
       {/* ══════════════════════════════════════════════════
           6 · DEPOIMENTOS
       ══════════════════════════════════════════════════ */}
-      <section id="depoimentos" className="py-28 bg-dark-100 overflow-hidden">
+      <section id="depoimentos" className="snap-section py-28 bg-dark-100 overflow-hidden">
         <div className="max-w-6xl mx-auto px-6">
 
           <div className="reveal mb-14 text-center">
@@ -490,7 +531,7 @@ export default function Home() {
       {/* ══════════════════════════════════════════════════
           7 · MEU BLOG
       ══════════════════════════════════════════════════ */}
-      <section id="blog" className="py-28 bg-dark">
+      <section id="blog" className="snap-section py-28 bg-dark">
         <div className="max-w-6xl mx-auto px-6">
 
           <div className="reveal flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-14">
@@ -511,7 +552,8 @@ export default function Home() {
                 key={post.id}
                 to={post.href}
                 className="group rounded-2xl overflow-hidden border border-dark-300
-                           hover:border-gold/30 transition-all duration-300"
+                           hover:border-gold/30 transition-all duration-300
+                           flex flex-col h-full"
               >
                 {/* Thumb */}
                 <div className="aspect-[16/9] overflow-hidden">
@@ -522,16 +564,18 @@ export default function Home() {
                 </div>
 
                 {/* Texto */}
-                <div className="p-5 bg-dark-200">
+                <div className="p-5 bg-dark-200 flex flex-col flex-1">
                   <div className="flex items-center gap-3 mb-3">
                     <span className="font-body text-[10px] text-gold tracking-widest uppercase">{post.category}</span>
                     <span className="w-1 h-1 rounded-full bg-dark-300" />
                     <span className="font-body text-[10px] text-white/35">{post.date}</span>
                   </div>
-                  <h3 className="font-display text-lg text-white font-medium leading-snug group-hover:text-gold transition-colors duration-300">
+                  <h3 className="font-display text-lg text-white font-medium leading-snug
+                             group-hover:text-gold transition-colors duration-300
+                             min-h-[3.25rem]">
                     {post.title}
                   </h3>
-                  <div className="flex items-center gap-1.5 mt-4 text-gold text-xs font-body">
+                  <div className="flex items-center gap-1.5 mt-auto pt-4 text-gold text-xs font-body">
                     <span>Ler mais</span>
                     <span className="transition-transform duration-300 group-hover:rotate-[-45deg]">→</span>
                   </div>
@@ -545,18 +589,22 @@ export default function Home() {
       {/* ══════════════════════════════════════════════════
           8 · CTA FINAL
       ══════════════════════════════════════════════════ */}
-      <section className="py-28 bg-dark-100">
-        <div className="max-w-3xl mx-auto px-6 text-center">
+      <section className="snap-section relative py-28 bg-dark-100 overflow-hidden">
+        <div className="absolute inset-0">
+          <img src={FotoGravida1} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-r from-dark/90 via-dark/70 to-dark/60" />
+        </div>
+        <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
           <div className="reveal">
-            <p className="font-body text-gold text-xs tracking-[0.3em] uppercase mb-4">Vamos criar juntas?</p>
+            <p className="font-body text-gold text-xs tracking-[0.3em] uppercase mb-2">Vamos criar juntas?</p>
             <h2
-              className="font-display font-light text-white mb-6"
+              className="font-display text-white mb-4 leading-tight"
               style={{ fontSize: 'clamp(2rem,5vw,3.5rem)' }}
             >
-              Pronta para guardar os seus<br />
+              <span className="font-semibold">Pronta para guardar os seus</span><br />
               <em className="text-gold not-italic font-semibold">momentos especiais?</em>
             </h2>
-            <p className="font-body text-white/50 text-sm leading-relaxed mb-10 max-w-md mx-auto">
+            <p className="font-body text-white/50 text-sm leading-relaxed mb-8 max-w-md mx-auto">
               Entre em contato e vamos conversar sobre a sessão dos seus sonhos.
               Atendo em Paulo Afonso e região.
             </p>

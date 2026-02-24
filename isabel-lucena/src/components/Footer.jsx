@@ -34,7 +34,7 @@ export default function Footer() {
 
   const socialLinks = [
     { label: 'Tiktok', href: 'https://tiktok.com/@isabeltravassos', icon: <TikTokIcon /> },
-    { label: 'Instagram', href: 'https://instagram.com/isabeltravassos', icon: <InstagramIcon /> },
+    { label: 'Instagram', href: 'https://instagram.com/isabellucenafotografia', icon: <InstagramIcon /> },
   ];
 
   const location = useLocation();
@@ -49,7 +49,7 @@ export default function Footer() {
           {/* Logo */}
           <div className="flex flex-col items-start gap-3">
             <div className="flex items-center gap-2 min-w-0">
-              <img src={isDashboard ? LogoPreta : LogoBranca} alt="Isabel Lucena" className="h-10 w-auto object-contain" />
+              <img src={isDashboard ? LogoPreta : LogoBranca} alt="Isabel Lucena" className="h-12 w-auto object-contain" />
             </div>
           </div>
 
