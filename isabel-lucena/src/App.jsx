@@ -7,6 +7,9 @@ import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
+import Trabalhos from './pages/Trabalhos';
+import GalleryPage from './pages/GalleryPage';
+import { GalleryProvider } from './context/GalleryContext';
 
 // Placeholder para páginas ainda não criadas
 const PlaceholderPage = ({ title }) => (
@@ -51,7 +54,8 @@ function SiteLayout() {
       <Header />
       <Routes>
         <Route path="/"          element={<Home />} />
-        <Route path="/trabalhos" element={<PlaceholderPage title="Meus Trabalhos" />} />
+        <Route path="/trabalhos" element={<Trabalhos />} />
+        <Route path="/galeria/:categoryId" element={<GalleryPage />} />
         <Route path="/blog"      element={<PlaceholderPage title="Blog" />} />
         <Route path="/sobre"     element={<PlaceholderPage title="Sobre Mim" />} />
         <Route path="/servicos"  element={<PlaceholderPage title="Serviços" />} />
@@ -64,14 +68,16 @@ function SiteLayout() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Dashboard — tela própria, sem header/footer do site */}
-        <Route path="/dashboard/*" element={<Dashboard />} />
+    <GalleryProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Dashboard — tela própria, sem header/footer do site */}
+          <Route path="/dashboard/*" element={<Dashboard />} />
 
-        {/* Site público */}
-        <Route path="/*" element={<SiteLayout />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Site público */}
+          <Route path="/*" element={<SiteLayout />} />
+        </Routes>
+      </BrowserRouter>
+    </GalleryProvider>
   );
 }
