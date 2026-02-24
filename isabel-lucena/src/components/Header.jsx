@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 import LogoBranca from '../assets/Logo-horzontal-branca.svg';
+import LogoPreta from '../assets/Logo-horzontal-preta.svg';
 
 // Ícone da câmera simples em SVG inline
 const CameraIcon = () => (
@@ -54,7 +55,16 @@ export default function Header() {
 
           {/* ── Logo ── */}
           <Link to="/" className="flex items-center gap-2.5 group">
-            <img src={LogoBranca} alt="Isabel Lucena" className="h-10 object-contain" />
+            {(() => {
+              const isDashboard = location.pathname.startsWith('/dashboard');
+              return (
+                <img
+                  src={isDashboard ? LogoPreta : LogoBranca}
+                  alt="Isabel Lucena"
+                  className="h-10 w-auto max-w-[220px] object-contain"
+                />
+              );
+            })()}
           </Link>
 
           {/* ── Nav desktop ── */}

@@ -1,5 +1,6 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import LogoBranca from '../assets/Logo-horzontal-branca.svg';
+import LogoPreta from '../assets/Logo-horzontal-preta.svg';
 
 const TikTokIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -36,6 +37,9 @@ export default function Footer() {
     { label: 'Instagram', href: 'https://instagram.com/isabeltravassos', icon: <InstagramIcon /> },
   ];
 
+  const location = useLocation();
+  const isDashboard = location.pathname.startsWith('/dashboard');
+
   return (
     <footer className="bg-dark-100 border-t border-dark-300 pt-14 pb-8 font-body">
       <div className="max-w-6xl mx-auto px-6">
@@ -45,7 +49,7 @@ export default function Footer() {
           {/* Logo */}
           <div className="flex flex-col items-start gap-3">
             <div className="flex items-center gap-2">
-              <img src={LogoBranca} alt="Isabel Lucena" className="h-10 object-contain" />
+              <img src={isDashboard ? LogoPreta : LogoBranca} alt="Isabel Lucena" className="h-10 w-auto max-w-[220px] object-contain" />
             </div>
           </div>
 
