@@ -1,6 +1,7 @@
 // src/pages/Dashboard.jsx
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase, uploadFoto, deleteFotoStorage } from '../lib/supabase';
+import LogoBranca from '../assets/Logo-horzontal-branca.svg';
 
 // ─────────────────────────────────────────────────────────────────
 //  ÍCONES SVG inline (sem dependência extra)
@@ -88,7 +89,7 @@ function LoginScreen({ onLogin }) {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">
-          <img src="/src/assets/Logo-horzontal-branca.svg" alt="Isabel Lucena" className="max-h-20 w-auto object-contain" />
+          <img src={LogoBranca} alt="Isabel Lucena" className="h-12 w-auto object-contain" />
           <p className="sr-only">Área restrita</p>
         </div>
 
