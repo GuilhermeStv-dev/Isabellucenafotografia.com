@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { ArrowLeft, Eye, Heart } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
 import GalleryGrid from '../components/GalleryGrid'
+import { getResponsiveImageSources } from '../lib/imageOptimization'
 
 export default function GalleryPage() {
   const { categoryId } = useParams()
@@ -23,6 +24,7 @@ export default function GalleryPage() {
   }
 
   const heroBg = categoryPhotos[0]?.url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1400'
+  const heroImage = getResponsiveImageSources(heroBg)
 
   const totalViews = categoryPhotos.reduce((s, p) => s + (p.views || 0), 0)
   const totalLikes = categoryPhotos.reduce((s, p) => s + (p.likes || 0), 0)
@@ -31,7 +33,7 @@ export default function GalleryPage() {
     <div className="bg-dark min-h-screen">
       {/* ── Hero ── */}
       <section className="relative h-[45vh] md:h-[55vh] flex items-end overflow-hidden">
-        <img src={heroBg} alt={category.label} className="absolute inset-0 w-full h-full object-cover opacity-50" />
+        <img src={heroImage.src} srcSet={heroImage.srcSet} sizes="100vw" alt={category.label} className="absolute inset-0 w-full h-full object-cover opacity-50" loading="eager" fetchPriority="high" decoding="async" />
         <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/50 to-transparent" />
         <div className="relative z-10 max-w-7xl mx-auto px-6 pb-10 w-full">
           <motion.div

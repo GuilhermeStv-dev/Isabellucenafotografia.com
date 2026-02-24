@@ -3,14 +3,16 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
+import { getResponsiveImageSources } from '../lib/imageOptimization'
 
-const HERO_BG = 'https://images.unsplash.com/photo-1493863641943-9b68992a8d07?w=1400'
+const HERO_BG_BASE = 'https://images.unsplash.com/photo-1493863641943-9b68992a8d07'
 
 const TAGS = ['Todos', 'Ensaios', 'Grávidas', 'Infantil', 'Wedding', 'Eventos']
 
 export default function Trabalhos() {
   const { categories, photos } = useGallery()
   const [activeTag, setActiveTag] = useState('Todos')
+  const heroImage = getResponsiveImageSources(HERO_BG_BASE)
 
   const filtered = activeTag === 'Todos'
     ? categories
@@ -20,7 +22,7 @@ export default function Trabalhos() {
     <div className="bg-dark min-h-screen">
       {/* ── Hero ── */}
       <section className="relative h-[45vh] md:h-[55vh] flex items-end overflow-hidden">
-        <img src={HERO_BG} alt="" className="absolute inset-0 w-full h-full object-cover opacity-50" />
+        <img src={heroImage.src} srcSet={heroImage.srcSet} sizes="100vw" alt="" className="absolute inset-0 w-full h-full object-cover opacity-50" loading="eager" fetchPriority="high" decoding="async" />
         <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/50 to-transparent" />
         <div className="relative z-10 max-w-7xl mx-auto px-6 pb-12 w-full">
           <motion.h1
@@ -65,6 +67,14 @@ export default function Trabalhos() {
             >
               {filtered.map((cat, i) => {
                 const coverPhoto = photos[cat.id]?.[0]
+                const coverImage = coverPhoto
+                  ? getResponsiveImageSources(coverPhoto.url, {
+                      widths: [480, 768, 1200],
+                      qualities: [68, 70, 75],
+                      fallbackWidth: 1200,
+                      fallbackQuality: 75,
+                    })
+                  : { src: '', srcSet: undefined }
                 return (
                   <motion.div
                     key={cat.id}
@@ -78,8 +88,13 @@ export default function Trabalhos() {
                     >
                       {coverPhoto ? (
                         <img
-                          src={coverPhoto.url}
+                          src={coverImage.src}
+                          srcSet={coverImage.srcSet}
+                          sizes="(min-width: 768px) 33vw, 50vw"
                           alt={cat.label}
+                          loading="lazy"
+                          fetchPriority="low"
+                          decoding="async"
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         />
                       ) : (

@@ -176,3 +176,52 @@ e a fonte Cormorant Garamond.
 | `framer-motion` | Animações (entrada, hover, etc) |
 | `yet-another-react-lightbox` | Lightbox ao clicar nas fotos |
 | `lucide-react` | Ícones |
+| `web-vitals` | Coleta de LCP, CLS, INP, FCP e TTFB |
+
+---
+
+## 📈 Web Vitals
+
+As métricas já são coletadas no cliente e exibidas no console em ambiente de desenvolvimento.
+
+Por padrão, o frontend envia para `POST /api/web-vitals` (Vercel Function já incluída no projeto).
+
+### Persistência em Supabase (recomendado)
+
+1. Execute o SQL em `supabase/web_vitals.sql` no SQL Editor do seu projeto Supabase.
+2. No painel da Vercel, adicione as variáveis de ambiente:
+
+```
+SUPABASE_URL=https://<seu-projeto>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+WEB_VITALS_TABLE=web_vitals
+```
+
+3. Faça novo deploy.
+
+Com isso, a Function grava os eventos de vitals direto na tabela `web_vitals`.
+
+Para montar dashboards rapidamente (resumo diário, p75 por rota, regressão semanal e top rotas críticas), use as queries em:
+
+`supabase/web_vitals_queries.sql`
+
+Se quiser deixar painéis prontos para consumo direto (views), execute também:
+
+`supabase/web_vitals_views.sql`
+
+Views criadas:
+- `public.vw_web_vitals_daily_route_metric`
+- `public.vw_web_vitals_core_route_p75_7d`
+- `public.vw_web_vitals_weekly_regression`
+
+> Observação: no endpoint atual, os dados também são anexados em `/tmp/web-vitals.csv` para inspeção rápida em runtime (armazenamento efêmero do serverless).
+
+Se as variáveis do Supabase não estiverem configuradas, o endpoint continua funcionando com fallback em `/tmp/web-vitals.csv`.
+
+Para enviar para um endpoint (analytics próprio), configure no `.env`:
+
+```
+VITE_WEB_VITALS_ENDPOINT=https://seu-endpoint.com/web-vitals
+```
+
+O envio usa `navigator.sendBeacon` quando disponível.

@@ -1,7 +1,9 @@
-import { useState } from 'react'
-import Lightbox from 'yet-another-react-lightbox'
+import { lazy, Suspense, useState } from 'react'
 import PhotoCard from './PhotoCard'
 import { motion } from 'framer-motion'
+import { getResponsiveImageSources } from '../lib/imageOptimization'
+
+const Lightbox = lazy(() => import('yet-another-react-lightbox'))
 
 const CHUNK = 6
 
@@ -10,7 +12,15 @@ export default function GalleryGrid({ photos }) {
   const [index, setIndex] = useState(0)
   const [visible, setVisible] = useState(CHUNK)
 
-  const slides = photos.map(p => ({ src: p.url }))
+  const slides = photos.map((photo) => {
+    const optimized = getResponsiveImageSources(photo.url, {
+      widths: [1024, 1600, 2048],
+      qualities: [72, 75, 80],
+      fallbackWidth: 2048,
+      fallbackQuality: 80,
+    })
+    return { src: optimized.src }
+  })
 
   const handleClick = (photo) => {
     const i = photos.indexOf(photo)
@@ -70,13 +80,17 @@ export default function GalleryGrid({ photos }) {
         </div>
       )}
 
-      <Lightbox
-        open={open}
-        close={() => setOpen(false)}
-        index={index}
-        slides={slides}
-        styles={{ container: { backgroundColor: 'rgba(0,0,0,0.95)' } }}
-      />
+      {open && (
+        <Suspense fallback={null}>
+          <Lightbox
+            open={open}
+            close={() => setOpen(false)}
+            index={index}
+            slides={slides}
+            styles={{ container: { backgroundColor: 'rgba(0,0,0,0.95)' } }}
+          />
+        </Suspense>
+      )}
     </div>
   )
 }

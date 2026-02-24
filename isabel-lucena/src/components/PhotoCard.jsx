@@ -1,8 +1,15 @@
 import { useState } from 'react'
 import { Eye, Heart, MessageCircle } from 'lucide-react'
+import { getResponsiveImageSources } from '../lib/imageOptimization'
 
 export default function PhotoCard({ photo, onClick }) {
   const [loaded, setLoaded] = useState(false)
+  const image = getResponsiveImageSources(photo.url, {
+    widths: [480, 768, 1200],
+    qualities: [68, 70, 75],
+    fallbackWidth: 1200,
+    fallbackQuality: 75,
+  })
 
   return (
     <div
@@ -12,8 +19,13 @@ export default function PhotoCard({ photo, onClick }) {
       {/* Image */}
       <div className="aspect-[3/4] overflow-hidden">
         <img
-          src={photo.url}
+          src={image.src}
+          srcSet={image.srcSet}
+          sizes="(min-width: 1024px) 26vw, (min-width: 768px) 33vw, 50vw"
           alt=""
+          loading="lazy"
+          fetchPriority="low"
+          decoding="async"
           onLoad={() => setLoaded(true)}
           className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105
             ${loaded ? 'opacity-100' : 'opacity-0'}`}

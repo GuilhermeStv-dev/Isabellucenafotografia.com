@@ -7,7 +7,29 @@ const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ─── Nome do bucket (deve ser igual ao criado no Supabase) ───
-const BUCKET = 'Fotos';
+export const BUCKET = 'Fotos';
+
+export function getStoragePathFromPublicUrl(url = '') {
+  const normalizado = decodeURIComponent(String(url));
+  const markerPublic = `/storage/v1/object/public/${BUCKET}/`;
+  const markerRender = `/storage/v1/render/image/public/${BUCKET}/`;
+
+  const marker = normalizado.includes(markerPublic)
+    ? markerPublic
+    : (normalizado.includes(markerRender) ? markerRender : null);
+
+  if (!marker) return null;
+
+  const pathComQuery = normalizado.split(marker)[1];
+  if (!pathComQuery) return null;
+
+  return pathComQuery.split('?')[0] || null;
+}
+
+export function getTransformedFotoUrl(path, transform = {}) {
+  if (!path) return '';
+  return supabase.storage.from(BUCKET).getPublicUrl(path, { transform }).data.publicUrl;
+}
 
 /** Faz upload de um arquivo e retorna a URL pública */
 export async function uploadFoto(file, categoria) {
