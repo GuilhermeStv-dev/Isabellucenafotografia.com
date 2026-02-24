@@ -2,6 +2,7 @@ import { getStoragePathFromPublicUrl, getTransformedFotoUrl } from './supabase'
 
 const DEFAULT_WIDTHS = [640, 1024, 1600]
 const DEFAULT_QUALITIES = [70, 72, 75]
+const ENABLE_SUPABASE_TRANSFORMS = import.meta.env.VITE_ENABLE_SUPABASE_IMAGE_TRANSFORM === 'true'
 
 const isUnsplashUrl = (url = '') => url.includes('images.unsplash.com/')
 
@@ -29,22 +30,24 @@ export function getResponsiveImageSources(url, options = {}) {
   const fallbackWidth = options.fallbackWidth || widths[widths.length - 1] || 1600
   const fallbackQuality = options.fallbackQuality || qualities[qualities.length - 1] || 75
 
-  if (!url) return { src: '', srcSet: undefined }
+  if (!url) return { src: '', srcSet: undefined, fallbackSrc: '' }
 
   if (isUnsplashUrl(url)) {
     return {
       src: buildUnsplashUrl(url, fallbackWidth, fallbackQuality),
       srcSet: buildUnsplashSet(url, widths, qualities),
+      fallbackSrc: url,
     }
   }
 
   const storagePath = getStoragePathFromPublicUrl(url)
-  if (storagePath) {
+  if (storagePath && ENABLE_SUPABASE_TRANSFORMS) {
     return {
       src: getTransformedFotoUrl(storagePath, { width: fallbackWidth, quality: fallbackQuality }),
       srcSet: buildSupabaseSet(storagePath, widths, qualities),
+      fallbackSrc: url,
     }
   }
 
-  return { src: url, srcSet: undefined }
+  return { src: url, srcSet: undefined, fallbackSrc: url }
 }

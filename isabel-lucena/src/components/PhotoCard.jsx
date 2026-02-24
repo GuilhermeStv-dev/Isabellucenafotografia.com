@@ -27,6 +27,14 @@ export default function PhotoCard({ photo, onClick }) {
           fetchPriority="low"
           decoding="async"
           onLoad={() => setLoaded(true)}
+          onError={(event) => {
+            if (image.fallbackSrc && event.currentTarget.src !== image.fallbackSrc) {
+              event.currentTarget.src = image.fallbackSrc
+              event.currentTarget.srcset = ''
+              return
+            }
+            setLoaded(true)
+          }}
           className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105
             ${loaded ? 'opacity-100' : 'opacity-0'}`}
         />

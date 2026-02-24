@@ -33,7 +33,12 @@ export default function GalleryPage() {
     <div className="bg-dark min-h-screen">
       {/* ── Hero ── */}
       <section className="relative h-[45vh] md:h-[55vh] flex items-end overflow-hidden">
-        <img src={heroImage.src} srcSet={heroImage.srcSet} sizes="100vw" alt={category.label} className="absolute inset-0 w-full h-full object-cover opacity-50" loading="eager" fetchPriority="high" decoding="async" />
+        <img src={heroImage.src} srcSet={heroImage.srcSet} sizes="100vw" alt={category.label} className="absolute inset-0 w-full h-full object-cover opacity-50" loading="eager" fetchPriority="high" decoding="async" onError={(event) => {
+          if (heroImage.fallbackSrc && event.currentTarget.src !== heroImage.fallbackSrc) {
+            event.currentTarget.src = heroImage.fallbackSrc
+            event.currentTarget.srcset = ''
+          }
+        }} />
         <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/50 to-transparent" />
         <div className="relative z-10 max-w-7xl mx-auto px-6 pb-10 w-full">
           <motion.div
