@@ -140,13 +140,7 @@ export default function Home() {
   const { categories, photos } = useGallery();
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.classList.add('snap-scroll');
-    document.body.classList.add('snap-scroll');
-    return () => {
-      root.classList.remove('snap-scroll');
-      document.body.classList.remove('snap-scroll');
-    };
+    return undefined;
   }, []);
 
   const scrollTo = (id) => {

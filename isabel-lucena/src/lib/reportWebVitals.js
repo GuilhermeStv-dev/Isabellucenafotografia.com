@@ -40,6 +40,9 @@ function logInDev(metric) {
 }
 
 export function initWebVitals() {
+  const enabled = import.meta.env.VITE_ENABLE_WEB_VITALS === 'true'
+  if (!enabled) return
+
   const reporter = (metric) => {
     logInDev(metric)
     sendToEndpoint(metric)

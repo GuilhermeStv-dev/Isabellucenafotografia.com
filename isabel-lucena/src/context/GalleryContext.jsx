@@ -41,20 +41,11 @@ export function GalleryProvider({ children }) {
     } catch { return DEFAULT_CATEGORIES }
   })
 
-  const [photos, setPhotos] = useState(() => {
-    try {
-      const saved = localStorage.getItem('il_photos')
-      return saved ? JSON.parse(saved) : DEFAULT_PHOTOS
-    } catch { return DEFAULT_PHOTOS }
-  })
+  const [photos, setPhotos] = useState(DEFAULT_PHOTOS)
 
   useEffect(() => {
     localStorage.setItem('il_categories', JSON.stringify(categories))
   }, [categories])
-
-  useEffect(() => {
-    localStorage.setItem('il_photos', JSON.stringify(photos))
-  }, [photos])
 
   useEffect(() => {
     let ativo = true

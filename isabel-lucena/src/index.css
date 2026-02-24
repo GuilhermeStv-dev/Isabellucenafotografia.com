@@ -4,13 +4,7 @@
 
 @layer base {
   * {
-    scroll-behavior: smooth;
     box-sizing: border-box;
-  }
-
-  html.snap-scroll,
-  body.snap-scroll {
-    scroll-snap-type: y mandatory;
   }
 
   body {
@@ -24,11 +18,6 @@
     background-color: #C9A96E;
     color: #0F0F0F;
   }
-}
-
-.snap-section {
-  scroll-snap-align: center;
-  scroll-snap-stop: always;
 }
 
 @layer components {

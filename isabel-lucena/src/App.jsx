@@ -40,11 +40,11 @@ function SiteLayout() {
       if (!ativo) return;
 
       lenis = new Lenis({
-        duration: 1.05,
+        duration: 0.75,
         easing: easeInOutCubic,
-        smoothWheel: true,
+        smoothWheel: !window.matchMedia('(prefers-reduced-motion: reduce)').matches,
         smoothTouch: false,
-        wheelMultiplier: 1.1,
+        wheelMultiplier: 0.95,
       });
 
       window.__lenis = lenis;
