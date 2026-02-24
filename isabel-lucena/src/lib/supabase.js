@@ -14,7 +14,30 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ─── Helpers de Storage ───────────────────────────────
 
 /** Faz upload de um arquivo e retorna a URL pública */
+// ensure bucket exists before trying to upload
+let _bucketChecked = false;
+async function ensureBucketExists(bucketName) {
+  if (_bucketChecked) return;
+  const { data: buckets, error } = await supabase.storage.listBuckets();
+  if (error) {
+    console.error('could not list buckets', error);
+    throw error;
+  }
+  if (!buckets.find((b) => b.name === bucketName)) {
+    const { data: created, error: createErr } = await supabase.storage.createBucket(bucketName, { public: true });
+    if (createErr && createErr.status !== 409) {
+      console.error('failed creating bucket', bucketName, createErr);
+      throw createErr;
+    }
+    console.log('bucket created', bucketName, created);
+  }
+  _bucketChecked = true;
+}
+
 export async function uploadFoto(file, categoria) {
+  // make sure storage bucket is ready (run once per session)
+  await ensureBucketExists('fotos');
+
   const ext = file.name.split('.').pop();
   // generate a more robust unique name to avoid collisions
   const nome = `${categoria}/${Date.now()}-${Math.floor(Math.random()*1e6)}.${ext}`;
