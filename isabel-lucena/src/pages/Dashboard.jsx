@@ -1,6 +1,7 @@
 // src/pages/Dashboard.jsx
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase, uploadFoto, deleteFotoStorage } from '../lib/supabase';
+import { compressImage, runWithConcurrency } from '../lib/imageUtils';
 import LogoBranca from '../assets/Logo-horzontal-branca.webp';
 import LogoPreta from '../assets/Logo-horzontal-preta.webp';
 
@@ -243,72 +244,6 @@ function DropZone({ onFiles }) {
 //  4. Sem bloquear a UI durante o processo
 // ─────────────────────────────────────────────────────────────────
 
-import { useState, useCallback, useRef } from 'react'
-import { supabase, uploadFoto } from '../lib/supabase'
-import { compressImage, runWithConcurrency } from '../lib/imageUtils'
-
-// ── Ícones inline (mesmos do Dashboard.jsx original) ──
-const Icon = {
-  Upload: () => (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-    </svg>
-  ),
-  Check: () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-      <polyline points="20 6 9 17 4 12"/>
-    </svg>
-  ),
-}
-
-// ── DropZone (sem alterações estruturais) ──
-function DropZone({ onFiles }) {
-  const [dragOver, setDragOver] = useState(false)
-  const inputRef = useRef()
-
-  const handleDrop = (e) => {
-    e.preventDefault()
-    setDragOver(false)
-    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'))
-    if (files.length) onFiles(files)
-  }
-
-  return (
-    <div
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={handleDrop}
-      onClick={() => inputRef.current.click()}
-      className={`
-        border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center
-        cursor-pointer transition-all duration-300 text-center
-        ${dragOver
-          ? 'border-gold bg-gold/5 scale-[1.01]'
-          : 'border-dark-300 hover:border-gold/40 hover:bg-dark-200/50'
-        }
-      `}
-    >
-      <input
-        ref={inputRef}
-        type="file"
-        multiple
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => onFiles(Array.from(e.target.files))}
-      />
-      <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4
-                       transition-all duration-300
-                       ${dragOver ? 'bg-gold text-dark' : 'bg-dark-300 text-gold'}`}>
-        <Icon.Upload />
-      </div>
-      <p className="font-body text-white/80 font-medium mb-1">
-        {dragOver ? 'Solte as fotos aqui!' : 'Arraste as fotos ou clique para selecionar'}
-      </p>
-      <p className="font-body text-white/30 text-xs">JPG, PNG, WEBP — várias fotos de uma vez</p>
-    </div>
-  )
-}
-
 // ── Barra de progresso ──
 function ProgressBar({ done, total }) {
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
@@ -329,7 +264,7 @@ function ProgressBar({ done, total }) {
 }
 
 // ── Componente principal ──
-export default function AbaUpload({ categorias, onUploadConcluido }) {
+function AbaUpload({ categorias, onUploadConcluido }) {
   const [catSelecionada, setCatSelecionada] = useState('')
   const [filas, setFilas] = useState([])
   const [fazendoUpload, setFazendoUpload] = useState(false)
