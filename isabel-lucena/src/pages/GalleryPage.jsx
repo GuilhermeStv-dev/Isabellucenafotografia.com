@@ -1,0 +1,73 @@
+import { useParams, Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { ArrowLeft, Eye, Heart } from 'lucide-react'
+import { useGallery } from '../context/GalleryContext'
+import GalleryGrid from '../components/GalleryGrid'
+
+export default function GalleryPage() {
+  const { categoryId } = useParams()
+  const { categories, photos } = useGallery()
+
+  const category = categories.find(c => c.id === categoryId)
+  const categoryPhotos = photos[categoryId] || []
+
+  if (!category) {
+    return (
+      <div className="min-h-screen bg-dark flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-white/40 mb-4">Categoria não encontrada.</p>
+          <Link to="/trabalhos" className="btn-outline">← Voltar</Link>
+        </div>
+      </div>
+    )
+  }
+
+  const heroBg = categoryPhotos[0]?.url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1400'
+
+  const totalViews = categoryPhotos.reduce((s, p) => s + (p.views || 0), 0)
+  const totalLikes = categoryPhotos.reduce((s, p) => s + (p.likes || 0), 0)
+
+  return (
+    <div className="bg-dark min-h-screen">
+      {/* ── Hero ── */}
+      <section className="relative h-[45vh] md:h-[55vh] flex items-end overflow-hidden">
+        <img src={heroBg} alt={category.label} className="absolute inset-0 w-full h-full object-cover opacity-50" />
+        <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/50 to-transparent" />
+        <div className="relative z-10 max-w-7xl mx-auto px-6 pb-10 w-full">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+          >
+            <h1 className="font-display text-4xl md:text-5xl italic mb-3">{category.label}</h1>
+            <div className="flex items-center gap-6 text-white/40 text-sm">
+              <span className="flex items-center gap-1.5">
+                <Eye size={14} /> {totalViews.toLocaleString('pt-BR')} visualizações
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Heart size={14} /> {totalLikes.toLocaleString('pt-BR')} curtidas
+              </span>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── Gallery ── */}
+      <section className="py-12 max-w-7xl mx-auto px-6">
+        <div className="mb-8">
+          <Link to="/trabalhos" className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors">
+            <ArrowLeft size={14} /> Voltar aos trabalhos
+          </Link>
+        </div>
+
+        {categoryPhotos.length > 0 ? (
+          <GalleryGrid photos={categoryPhotos} />
+        ) : (
+          <div className="text-center py-24 text-white/30">
+            <p>Nenhuma foto nesta categoria ainda.</p>
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}

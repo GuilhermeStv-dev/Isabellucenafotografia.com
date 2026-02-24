@@ -1,0 +1,92 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    scroll-behavior: smooth;
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: #0F0F0F;
+    color: #ffffff;
+    font-family: 'DM Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: #C9A96E;
+    color: #0F0F0F;
+  }
+}
+
+@layer components {
+  /* ─── Botão base ─── */
+  .btn {
+    @apply inline-flex items-center gap-2 px-6 py-3 rounded-full font-body font-medium text-sm
+           transition-all duration-300 ease-in-out relative overflow-hidden
+           select-none cursor-pointer;
+  }
+
+  /* Pressed effect */
+  .btn:active {
+    transform: scale(0.96);
+    box-shadow: none !important;
+  }
+
+  /* ─── Botão primário (borda dourada / ghost) ─── */
+  .btn-primary {
+    @apply btn border border-gold text-white;
+    background: transparent;
+  }
+  .btn-primary:hover {
+    @apply bg-gold text-dark;
+    box-shadow: 0 4px 24px rgba(201,169,110,0.35);
+  }
+  .btn-primary:hover .btn-arrow {
+    transform: rotate(-45deg);
+  }
+
+  /* ─── Botão sólido dourado ─── */
+  .btn-gold {
+    @apply btn bg-gold text-dark-DEFAULT font-semibold;
+  }
+  .btn-gold:hover {
+    @apply bg-gold-light;
+    box-shadow: 0 4px 24px rgba(201,169,110,0.45);
+  }
+  .btn-gold:hover .btn-arrow {
+    transform: rotate(-45deg);
+  }
+
+  .btn-arrow {
+    @apply transition-transform duration-300;
+  }
+
+  /* ─── Scrollbar ─── */
+  ::-webkit-scrollbar {
+    width: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0F0F0F;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #C9A96E;
+    border-radius: 2px;
+  }
+}
+
+/* ─── Animações de entrada via IntersectionObserver ─── */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s cubic-bezier(0.25,0.46,0.45,0.94),
+              transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
