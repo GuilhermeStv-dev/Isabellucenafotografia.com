@@ -88,9 +88,8 @@ function LoginScreen({ onLogin }) {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">
-          <Icon.Camera />
-          <h1 className="font-display text-2xl text-white mt-3 italic">Isabel Lucena</h1>
-          <p className="font-body text-xs text-gold/70 tracking-[0.3em] uppercase mt-1">Área restrita</p>
+          <img src="/src/assets/Logo-horzontal-branca.svg" alt="Isabel Lucena" className="h-12 object-contain" />
+          <p className="sr-only">Área restrita</p>
         </div>
 
         {/* Card */}

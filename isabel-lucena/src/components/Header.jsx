@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
+import LogoBranca from '../assets/Logo-horzontal-branca.svg';
+
 // Ícone da câmera simples em SVG inline
 const CameraIcon = () => (
   <svg width="28" height="22" viewBox="0 0 28 22" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -52,19 +54,7 @@ export default function Header() {
 
           {/* ── Logo ── */}
           <Link to="/" className="flex items-center gap-2.5 group">
-            <CameraIcon />
-            <div className="leading-tight">
-              <span
-                className="block font-display text-white text-xl font-semibold tracking-wider
-                           group-hover:text-gold transition-colors duration-300"
-                style={{ fontStyle: 'italic' }}
-              >
-                Isabel Lucena
-              </span>
-              <span className="block font-body text-[10px] tracking-[0.25em] text-gold/80 uppercase">
-                fotografia
-              </span>
-            </div>
+            <img src={LogoBranca} alt="Isabel Lucena" className="h-10 object-contain" />
           </Link>
 
           {/* ── Nav desktop ── */}

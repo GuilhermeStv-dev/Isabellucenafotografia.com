@@ -1,13 +1,5 @@
 import { Link } from 'react-router-dom';
-
-const CameraIcon = () => (
-  <svg width="34" height="26" viewBox="0 0 28 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M10 2L7.5 5H3C1.9 5 1 5.9 1 7V19C1 20.1 1.9 21 3 21H25C26.1 21 27 20.1 27 19V7C27 5.9 26.1 5 25 5H20.5L18 2H10Z"
-      stroke="#C9A96E" strokeWidth="1.5" fill="none" />
-    <circle cx="14" cy="13" r="5" stroke="#C9A96E" strokeWidth="1.5" fill="none" />
-    <circle cx="14" cy="13" r="2" fill="#C9A96E" />
-  </svg>
-);
+import LogoBranca from '../assets/Logo-horzontal-branca.svg';
 
 const TikTokIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -53,15 +45,7 @@ export default function Footer() {
           {/* Logo */}
           <div className="flex flex-col items-start gap-3">
             <div className="flex items-center gap-2">
-              <CameraIcon />
-              <div>
-                <span className="block font-display text-lg font-semibold text-white italic">
-                  Isabel Lucena
-                </span>
-                <span className="block font-body text-[9px] tracking-[0.22em] text-gold/70 uppercase">
-                  fotografia
-                </span>
-              </div>
+              <img src={LogoBranca} alt="Isabel Lucena" className="h-10 object-contain" />
             </div>
           </div>
 
