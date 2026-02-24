@@ -141,7 +141,7 @@ export default function Home() {
             <img src="/hero.jpg" className="absolute inset-0 w-full h-full object-cover" alt="" />
         */}
         <div className="absolute inset-0">
-          <ImgPlaceholder className="w-full h-full" icon="📸" />
+          <Img src="/isabel-lucena/src/assets/foto-isabel.jpeg" className="w-full h-full" icon="📸" />
         </div>
 
         {/* Conteúdo */}
