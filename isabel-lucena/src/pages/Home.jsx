@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useGallery } from '../context/GalleryContext';
+import { getResponsiveImageSources } from '../lib/imageOptimization';
 import FotoIsabel640 from '../assets/optimized/foto-isabel-640.webp';
 import FotoIsabel1024 from '../assets/optimized/foto-isabel-1024.webp';
 import FotoIsabel1600 from '../assets/optimized/foto-isabel-1600.webp';
@@ -39,17 +41,7 @@ function useReveal() {
    DADOS — Altere aqui os textos / imagens
 ───────────────────────────────────────────── */
 
-// Pré-visualização da galeria na Home
-// Substitua 'src' pelas URLs/paths das suas fotos
-const GALLERY_PREVIEW = [
-  { id: 1, src: '', alt: 'Grávida casal', category: 'Grávidas', span: 'row-span-2' },
-  { id: 2, src: '', alt: 'Retrato feminino', category: 'Ensaios', span: '' },
-  { id: 3, src: '', alt: 'Ensaio externo', category: 'Ensaios', span: '' },
-  { id: 4, src: '', alt: 'Casamento', category: 'Wedding', span: 'row-span-2' },
-  { id: 5, src: '', alt: 'Ensaio feminino', category: 'Ensaios', span: '' },
-  { id: 6, src: '', alt: 'Infantil', category: 'Infantil', span: '' },
-  { id: 7, src: '', alt: 'Aniversário', category: 'Eventos', span: '' },
-];
+const PREVIEW_SPANS = ['row-span-2', '', '', 'row-span-2', '', '', ''];
 
 const SERVICES = [
   {
@@ -145,6 +137,7 @@ const Stars = ({ count }) => (
 export default function Home() {
   useReveal();
   const [activeService, setActiveService] = useState(0);
+  const { categories, photos } = useGallery();
 
   useEffect(() => {
     const root = document.documentElement;
@@ -296,22 +289,51 @@ export default function Home() {
 
           {/* Grid masonry-like */}
           <div className="reveal grid grid-cols-3 gap-3" style={{ gridAutoRows: '180px' }}>
-            {GALLERY_PREVIEW.map((item) => (
-              <div
-                key={item.id}
-                className={`rounded-xl overflow-hidden group relative cursor-pointer ${item.span}`}
-              >
-                {item.src
-                  ? <img src={item.src} alt={item.alt} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy" decoding="async" />
-                  : <ImgPlaceholder className="w-full h-full transition-transform duration-700 group-hover:scale-105" />
-                }
-                {/* Overlay com categoria no hover */}
-                <div className="absolute inset-0 bg-gradient-to-t from-dark/80 via-transparent to-transparent
+            {categories.slice(0, 7).map((category, index) => {
+              const coverPhoto = photos[category.id]?.[0];
+              const coverImage = coverPhoto
+                ? getResponsiveImageSources(coverPhoto.url, {
+                  widths: [480, 768, 1200],
+                  qualities: [68, 70, 75],
+                  fallbackWidth: 1200,
+                  fallbackQuality: 75,
+                })
+                : { src: '', srcSet: undefined, fallbackSrc: '' };
+
+              return (
+                <Link
+                  to={`/galeria/${category.id}`}
+                  key={category.id}
+                  className={`rounded-xl overflow-hidden group relative cursor-pointer ${PREVIEW_SPANS[index] || ''}`}
+                >
+                  {coverPhoto
+                    ? (
+                      <img
+                        src={coverImage.src}
+                        srcSet={coverImage.srcSet}
+                        sizes="(min-width: 1024px) 30vw, 33vw"
+                        alt={category.label}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        loading="lazy"
+                        decoding="async"
+                        onError={(event) => {
+                          if (coverImage.fallbackSrc && event.currentTarget.src !== coverImage.fallbackSrc) {
+                            event.currentTarget.src = coverImage.fallbackSrc;
+                            event.currentTarget.srcset = '';
+                          }
+                        }}
+                      />
+                    )
+                    : <ImgPlaceholder className="w-full h-full transition-transform duration-700 group-hover:scale-105" />
+                  }
+                  {/* Overlay com categoria no hover */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-dark/80 via-transparent to-transparent
                                 opacity-0 group-hover:opacity-100 transition-opacity duration-400 flex items-end p-4">
-                  <span className="font-body text-xs text-gold tracking-widest uppercase">{item.category}</span>
-                </div>
-              </div>
-            ))}
+                    <span className="font-body text-xs text-gold tracking-widest uppercase">{category.tag}</span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>

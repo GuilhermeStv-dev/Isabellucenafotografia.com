@@ -11,6 +11,7 @@ const files = [
   'Foto-isabel3.png',
   'Foto-Isabel4.png',
   'foto-gravida1.jpg',
+  'trabalho-container.png',
 ];
 
 const widths = [640, 1024, 1600];
