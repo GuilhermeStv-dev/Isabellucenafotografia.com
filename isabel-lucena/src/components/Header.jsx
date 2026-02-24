@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
-import LogoBranca from '../assets/Logo-horzontal-branca.svg';
-import LogoPreta from '../assets/Logo-horzontal-preta.svg';
+import LogoBranca from '../assets/Logo-horzontal-branca.png';
+import LogoPreta from '../assets/Logo-horzontal-preta.png';
 
 // Ícone da câmera simples em SVG inline
 const CameraIcon = () => (
@@ -98,7 +98,7 @@ export default function Header() {
               className="btn-primary text-sm"
             >
               Entrar em contato
-              <span className="btn-arrow text-gold">→</span>
+              <span className="btn-arrow">→</span>
             </a>
           </div>
 
@@ -147,7 +147,7 @@ export default function Header() {
           className="btn-primary mt-4"
           style={{ transitionDelay: `${navLinks.length * 60}ms` }}
         >
-          Entrar em contato <span className="btn-arrow text-gold">→</span>
+          Entrar em contato <span className="btn-arrow">→</span>
         </a>
       </div>
     </>

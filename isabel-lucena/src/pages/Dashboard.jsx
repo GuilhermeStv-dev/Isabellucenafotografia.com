@@ -1,7 +1,7 @@
 // src/pages/Dashboard.jsx
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase, uploadFoto, deleteFotoStorage } from '../lib/supabase';
-import LogoBranca from '../assets/Logo-horzontal-branca.svg';
+import LogoBranca from '../assets/Logo-horzontal-branca.png';
 
 // ─────────────────────────────────────────────────────────────────
 //  ÍCONES SVG inline (sem dependência extra)

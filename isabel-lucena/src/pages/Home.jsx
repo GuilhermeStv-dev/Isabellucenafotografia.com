@@ -230,7 +230,7 @@ export default function Home() {
               </h2>
             </div>
             <Link to="/trabalhos" className="btn-primary shrink-0">
-              Ver tudo <span className="btn-arrow text-gold">→</span>
+              Ver tudo <span className="btn-arrow">→</span>
             </Link>
           </div>
 
@@ -317,7 +317,7 @@ export default function Home() {
               rel="noopener noreferrer"
               className="btn-primary"
             >
-              Agendar um ensaio <span className="btn-arrow text-gold">→</span>
+              Agendar um ensaio <span className="btn-arrow">→</span>
             </a>
           </div>
         </div>
@@ -411,7 +411,7 @@ export default function Home() {
               </h2>
             </div>
             <Link to="/trabalhos" className="btn-primary shrink-0">
-              Ver tudo <span className="btn-arrow text-gold">→</span>
+              Ver tudo <span className="btn-arrow">→</span>
             </Link>
           </div>
 
@@ -501,7 +501,7 @@ export default function Home() {
               </h2>
             </div>
             <Link to="/blog" className="btn-primary shrink-0">
-              Ver tudo <span className="btn-arrow text-gold">→</span>
+              Ver tudo <span className="btn-arrow">→</span>
             </Link>
           </div>
 
