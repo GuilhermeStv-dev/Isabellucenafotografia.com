@@ -52,7 +52,7 @@
 
   /* ─── Botão sólido dourado ─── */
   .btn-gold {
-    @apply btn bg-gold text-dark-DEFAULT font-semibold;
+    @apply btn bg-gold text-dark font-semibold;
   }
   .btn-gold:hover {
     @apply bg-gold-light;
