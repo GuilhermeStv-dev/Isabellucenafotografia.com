@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
 // ── Default data (placeholders — client replaces via dashboard) ──
@@ -34,6 +34,8 @@ const getTagFromSlug = (slug = '', nome = '') => {
 const GalleryContext = createContext(null)
 
 export function GalleryProvider({ children }) {
+  const loadedCategoryIdsRef = useRef(new Set())
+
   const [categories, setCategories] = useState(() => {
     try {
       const saved = localStorage.getItem('il_categories')
@@ -42,6 +44,7 @@ export function GalleryProvider({ children }) {
   })
 
   const [photos, setPhotos] = useState(DEFAULT_PHOTOS)
+  const [loadingPhotosByCategory, setLoadingPhotosByCategory] = useState({})
 
   useEffect(() => {
     localStorage.setItem('il_categories', JSON.stringify(categories))
@@ -68,32 +71,41 @@ export function GalleryProvider({ children }) {
       const slugs = categoriasMapeadas.map((cat) => cat.id)
       const baseFotos = Object.fromEntries(slugs.map((slug) => [slug, []]))
 
-      let fotosPorCategoria = baseFotos
-
+      let fotosPorCategoria = { ...baseFotos }
       if (slugs.length > 0) {
-        const { data: fotosDb, error: erroFotos } = await supabase
-          .from('fotos')
-          .select('id, categoria_slug, url, ativo')
-          .eq('ativo', true)
-          .in('categoria_slug', slugs)
-          .order('created_at', { ascending: false })
+        const covers = await Promise.all(
+          slugs.map(async (slug) => {
+            const { data, error } = await supabase
+              .from('fotos')
+              .select('id, categoria_slug, url')
+              .eq('ativo', true)
+              .eq('categoria_slug', slug)
+              .order('created_at', { ascending: false })
+              .limit(1)
 
-        if (!erroFotos && fotosDb) {
-          fotosPorCategoria = fotosDb.reduce((acc, foto) => {
-            const categoria = foto.categoria_slug
-            if (!acc[categoria]) acc[categoria] = []
-            acc[categoria].push({
-              id: String(foto.id),
-              url: foto.url,
-              views: 0,
-              likes: 0,
-            })
-            return acc
-          }, { ...baseFotos })
-        }
+            if (error || !data?.length) return { slug, cover: null }
+
+            const foto = data[0]
+            return {
+              slug,
+              cover: {
+                id: String(foto.id),
+                url: foto.url,
+                views: 0,
+                likes: 0,
+              },
+            }
+          })
+        )
+
+        fotosPorCategoria = covers.reduce((acc, item) => {
+          if (item.cover) acc[item.slug] = [item.cover]
+          return acc
+        }, { ...baseFotos })
       }
 
       if (ativo) {
+        loadedCategoryIdsRef.current = new Set()
         setCategories(categoriasMapeadas)
         setPhotos(fotosPorCategoria)
       }
@@ -102,6 +114,32 @@ export function GalleryProvider({ children }) {
     syncFromSupabase()
     return () => { ativo = false }
   }, [])
+
+  const ensureCategoryPhotosLoaded = useCallback(async (categoryId) => {
+    if (!categoryId || loadingPhotosByCategory[categoryId] || loadedCategoryIdsRef.current.has(categoryId)) return
+
+    setLoadingPhotosByCategory((prev) => ({ ...prev, [categoryId]: true }))
+
+    const { data: fotosDb, error: erroFotos } = await supabase
+      .from('fotos')
+      .select('id, categoria_slug, url, ativo')
+      .eq('ativo', true)
+      .eq('categoria_slug', categoryId)
+      .order('created_at', { ascending: false })
+
+    if (!erroFotos && fotosDb) {
+      const mapped = fotosDb.map((foto) => ({
+        id: String(foto.id),
+        url: foto.url,
+        views: 0,
+        likes: 0,
+      }))
+      setPhotos((prev) => ({ ...prev, [categoryId]: mapped }))
+      loadedCategoryIdsRef.current.add(categoryId)
+    }
+
+    setLoadingPhotosByCategory((prev) => ({ ...prev, [categoryId]: false }))
+  }, [loadingPhotosByCategory])
 
   // ── Category CRUD ──
   const addCategory = (cat) => setCategories(prev => [...prev, cat])
@@ -143,9 +181,10 @@ export function GalleryProvider({ children }) {
 
   return (
     <GalleryContext.Provider value={{
-      categories, photos, allPhotos,
+      categories, photos, allPhotos, loadingPhotosByCategory,
       addCategory, removeCategory, updateCategory,
       addPhoto, removePhoto, reorderPhotos, setCoverPhoto,
+      ensureCategoryPhotosLoaded,
     }}>
       {children}
     </GalleryContext.Provider>

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { ArrowLeft, Eye, Heart } from 'lucide-react'
@@ -7,10 +8,16 @@ import { getResponsiveImageSources } from '../lib/imageOptimization'
 
 export default function GalleryPage() {
   const { categoryId } = useParams()
-  const { categories, photos } = useGallery()
+  const { categories, photos, ensureCategoryPhotosLoaded, loadingPhotosByCategory } = useGallery()
 
   const category = categories.find(c => c.id === categoryId)
   const categoryPhotos = photos[categoryId] || []
+  const loadingCategory = !!loadingPhotosByCategory[categoryId]
+
+  useEffect(() => {
+    if (!categoryId) return
+    ensureCategoryPhotosLoaded(categoryId)
+  }, [categoryId, ensureCategoryPhotosLoaded])
 
   if (!category) {
     return (
@@ -69,6 +76,10 @@ export default function GalleryPage() {
 
         {categoryPhotos.length > 0 ? (
           <GalleryGrid photos={categoryPhotos} />
+        ) : loadingCategory ? (
+          <div className="text-center py-24 text-white/40">
+            <p>Carregando fotos...</p>
+          </div>
         ) : (
           <div className="text-center py-24 text-white/30">
             <p>Nenhuma foto nesta categoria ainda.</p>

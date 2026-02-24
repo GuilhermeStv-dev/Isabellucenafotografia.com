@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
@@ -31,14 +30,9 @@ export default function Trabalhos() {
         </picture>
         <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/50 to-transparent" />
         <div className="relative z-10 max-w-7xl mx-auto px-6 pb-12 w-full">
-          <motion.h1
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-            className="font-display text-4xl md:text-5xl italic"
-          >
+          <h1 className="font-display text-4xl md:text-5xl italic">
             Meus Trabalhos
-          </motion.h1>
+          </h1>
         </div>
       </section>
 
@@ -62,16 +56,8 @@ export default function Trabalhos() {
           </div>
 
           {/* Category cards grid */}
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTag}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-5"
-            >
-              {filtered.map((cat, i) => {
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-5">
+              {filtered.map((cat) => {
                 const coverPhoto = photos[cat.id]?.[0]
                 const coverImage = coverPhoto
                   ? getResponsiveImageSources(coverPhoto.url, {
@@ -82,12 +68,7 @@ export default function Trabalhos() {
                     })
                   : { src: '', srcSet: undefined, fallbackSrc: '' }
                 return (
-                  <motion.div
-                    key={cat.id}
-                    initial={{ opacity: 0, y: 24 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.06 }}
-                  >
+                  <div key={cat.id}>
                     <Link
                       to={`/galeria/${cat.id}`}
                       className="group block relative overflow-hidden rounded-2xl aspect-[3/4] bg-dark-card"
@@ -127,11 +108,10 @@ export default function Trabalhos() {
                         </div>
                       </div>
                     </Link>
-                  </motion.div>
+                  </div>
                 )
               })}
-            </motion.div>
-          </AnimatePresence>
+            </div>
         </div>
       </section>
     </div>

@@ -2,7 +2,7 @@ import { getStoragePathFromPublicUrl, getTransformedFotoUrl } from './supabase'
 
 const DEFAULT_WIDTHS = [640, 1024, 1600]
 const DEFAULT_QUALITIES = [70, 72, 75]
-const ENABLE_SUPABASE_TRANSFORMS = import.meta.env.VITE_ENABLE_SUPABASE_IMAGE_TRANSFORM === 'true'
+const ENABLE_SUPABASE_TRANSFORMS = import.meta.env.VITE_ENABLE_SUPABASE_IMAGE_TRANSFORM !== 'false'
 
 const isUnsplashUrl = (url = '') => url.includes('images.unsplash.com/')
 
