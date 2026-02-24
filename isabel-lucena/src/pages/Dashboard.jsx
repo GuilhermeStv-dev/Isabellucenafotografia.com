@@ -73,15 +73,38 @@ const Icon = {
 function LoginScreen({ onLogin }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [remember, setRemember] = useState(false);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
+
+  // carregar credenciais lembradas (se houver)
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('dashboardCreds') || 'null');
+      if (stored) {
+        setEmail(stored.email || '');
+        setSenha(stored.senha || '');
+        setRemember(true);
+      }
+    } catch {}
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setErro('');
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
-    if (error) setErro('E-mail ou senha incorretos.');
+    if (error) {
+      setErro('E-mail ou senha incorretos.');
+    } else {
+      // salvar ou limpar credenciais de acordo com checkbox
+      if (remember) {
+        localStorage.setItem('dashboardCreds', JSON.stringify({ email, senha }));
+      } else {
+        localStorage.removeItem('dashboardCreds');
+      }
+      onLogin?.();
+    }
     setLoading(false);
   };
 
@@ -128,6 +151,15 @@ function LoginScreen({ onLogin }) {
                            focus:outline-none focus:border-gold/60 transition-colors duration-200"
               />
             </div>
+            <label className="inline-flex items-center gap-2 text-white text-sm">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="form-checkbox h-4 w-4 text-gold bg-dark-200 border-dark-300 rounded"
+              />
+              Lembrar esta senha
+            </label>
           </div>
 
           {erro && (
