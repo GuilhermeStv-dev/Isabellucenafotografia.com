@@ -158,7 +158,7 @@ function LoginScreen({ onLogin }) {
                 onChange={(e) => setRemember(e.target.checked)}
                 className="form-checkbox h-4 w-4 text-gold bg-dark-200 border-dark-300 rounded"
               />
-              Lembrar esta senha
+              Lembrar de mim
             </label>
           </div>
 

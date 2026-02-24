@@ -21,15 +21,21 @@ async function ensureBucketExists(bucketName) {
   const { data: buckets, error } = await supabase.storage.listBuckets();
   if (error) {
     console.error('could not list buckets', error);
-    throw error;
+    // if we can't list we have no permissions; bail out quietly
+    return;
   }
   if (!buckets.find((b) => b.name === bucketName)) {
-    const { data: created, error: createErr } = await supabase.storage.createBucket(bucketName, { public: true });
-    if (createErr && createErr.status !== 409) {
-      console.error('failed creating bucket', bucketName, createErr);
-      throw createErr;
+    try {
+      const { data: created, error: createErr } = await supabase.storage.createBucket(bucketName, { public: true });
+      if (createErr) {
+        // permission issue or RLS prevents creation, just log warning
+        console.warn('unable to auto-create bucket, please create it manually', bucketName, createErr);
+      } else {
+        console.log('bucket created', bucketName, created);
+      }
+    } catch (err) {
+      console.warn('error while auto-creating bucket', bucketName, err);
     }
-    console.log('bucket created', bucketName, created);
   }
   _bucketChecked = true;
 }
