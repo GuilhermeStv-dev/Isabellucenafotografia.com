@@ -54,14 +54,14 @@ export default function Header() {
         <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
 
           {/* ── Logo ── */}
-          <Link to="/" className="flex items-center gap-2.5 group">
+          <Link to="/" className="flex items-center gap-2.5 group min-w-0">
             {(() => {
               const isDashboard = location.pathname.startsWith('/dashboard');
               return (
                 <img
                   src={isDashboard ? LogoPreta : LogoBranca}
                   alt="Isabel Lucena"
-                  className="h-10 w-auto max-w-[220px] object-contain"
+                  className="max-h-12 w-auto object-contain"
                 />
               );
             })()}

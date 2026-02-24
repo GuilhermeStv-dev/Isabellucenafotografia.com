@@ -48,8 +48,8 @@ export default function Footer() {
 
           {/* Logo */}
           <div className="flex flex-col items-start gap-3">
-            <div className="flex items-center gap-2">
-              <img src={isDashboard ? LogoPreta : LogoBranca} alt="Isabel Lucena" className="h-10 w-auto max-w-[220px] object-contain" />
+            <div className="flex items-center gap-2 min-w-0">
+              <img src={isDashboard ? LogoPreta : LogoBranca} alt="Isabel Lucena" className="max-h-10 w-auto object-contain" />
             </div>
           </div>
 

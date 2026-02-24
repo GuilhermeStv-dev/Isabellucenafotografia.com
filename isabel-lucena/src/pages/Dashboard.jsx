@@ -88,7 +88,7 @@ function LoginScreen({ onLogin }) {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">
-          <img src="/src/assets/Logo-horzontal-branca.svg" alt="Isabel Lucena" className="h-12 w-auto max-w-[320px] object-contain" />
+          <img src="/src/assets/Logo-horzontal-branca.svg" alt="Isabel Lucena" className="max-h-20 w-auto object-contain" />
           <p className="sr-only">Área restrita</p>
         </div>
 
