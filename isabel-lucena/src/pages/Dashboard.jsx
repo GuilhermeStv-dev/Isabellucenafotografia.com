@@ -234,68 +234,196 @@ function DropZone({ onFiles }) {
 }
 
 // ─────────────────────────────────────────────────────────────────
-//  ABA: UPLOAD DE FOTOS
+//  ABA: UPLOAD DE FOTOS — versão otimizada
+//
+//  Principais melhorias vs versão anterior:
+//  1. Compressão de imagem no browser antes do upload (via Canvas)
+//  2. Uploads em paralelo com limite de concorrência (3 simultâneos)
+//  3. Estado mais granular para feedback em tempo real
+//  4. Sem bloquear a UI durante o processo
 // ─────────────────────────────────────────────────────────────────
-function AbaUpload({ categorias, onUploadConcluido }) {
-  const [catSelecionada, setCatSelecionada] = useState('');
-  const [filas, setFilas] = useState([]); // [{file, preview, status, progresso}]
-  const [fazendoUpload, setFazendoUpload] = useState(false);
+
+import { useState, useCallback, useRef } from 'react'
+import { supabase, uploadFoto } from '../lib/supabase'
+import { compressImage, runWithConcurrency } from '../lib/imageUtils'
+
+// ── Ícones inline (mesmos do Dashboard.jsx original) ──
+const Icon = {
+  Upload: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+    </svg>
+  ),
+  Check: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  ),
+}
+
+// ── DropZone (sem alterações estruturais) ──
+function DropZone({ onFiles }) {
+  const [dragOver, setDragOver] = useState(false)
+  const inputRef = useRef()
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setDragOver(false)
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'))
+    if (files.length) onFiles(files)
+  }
+
+  return (
+    <div
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={handleDrop}
+      onClick={() => inputRef.current.click()}
+      className={`
+        border-2 border-dashed rounded-2xl p-12 flex flex-col items-center justify-center
+        cursor-pointer transition-all duration-300 text-center
+        ${dragOver
+          ? 'border-gold bg-gold/5 scale-[1.01]'
+          : 'border-dark-300 hover:border-gold/40 hover:bg-dark-200/50'
+        }
+      `}
+    >
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => onFiles(Array.from(e.target.files))}
+      />
+      <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4
+                       transition-all duration-300
+                       ${dragOver ? 'bg-gold text-dark' : 'bg-dark-300 text-gold'}`}>
+        <Icon.Upload />
+      </div>
+      <p className="font-body text-white/80 font-medium mb-1">
+        {dragOver ? 'Solte as fotos aqui!' : 'Arraste as fotos ou clique para selecionar'}
+      </p>
+      <p className="font-body text-white/30 text-xs">JPG, PNG, WEBP — várias fotos de uma vez</p>
+    </div>
+  )
+}
+
+// ── Barra de progresso ──
+function ProgressBar({ done, total }) {
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0
+  return (
+    <div className="w-full">
+      <div className="flex items-center justify-between font-body text-xs text-white/50 mb-1.5">
+        <span>{done} de {total} enviadas</span>
+        <span>{pct}%</span>
+      </div>
+      <div className="h-1.5 rounded-full bg-dark-300 overflow-hidden">
+        <div
+          className="h-full bg-gold rounded-full transition-all duration-300"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ── Componente principal ──
+export default function AbaUpload({ categorias, onUploadConcluido }) {
+  const [catSelecionada, setCatSelecionada] = useState('')
+  const [filas, setFilas] = useState([])
+  const [fazendoUpload, setFazendoUpload] = useState(false)
 
   const adicionarArquivos = useCallback((files) => {
     const novos = files.map((f) => ({
-      id: `${f.name}-${Date.now()}`,
+      id: `${f.name}-${Date.now()}-${Math.random()}`,
       file: f,
       preview: URL.createObjectURL(f),
-      status: 'aguardando', // aguardando | enviando | ok | erro
+      status: 'aguardando',
       erro: '',
-    }));
-    setFilas((prev) => [...prev, ...novos]);
-  }, []);
+      tamanhoOriginal: f.size,
+      tamanhoComprimido: null,
+    }))
+    setFilas((prev) => [...prev, ...novos])
+  }, [])
 
-  const removerDaFila = (id) => {
-    setFilas((prev) => prev.filter((f) => f.id !== id));
-  };
+  const removerDaFila = useCallback((id) => {
+    setFilas((prev) => {
+      const item = prev.find((f) => f.id === id)
+      if (item?.preview) URL.revokeObjectURL(item.preview)
+      return prev.filter((f) => f.id !== id)
+    })
+  }, [])
+
+  const setItemStatus = useCallback((id, update) => {
+    setFilas((prev) => prev.map((f) => f.id === id ? { ...f, ...update } : f))
+  }, [])
 
   const enviarTudo = async () => {
-    if (!catSelecionada) { alert('Selecione uma categoria antes de enviar.'); return; }
-    if (!filas.length) { alert('Adicione pelo menos uma foto.'); return; }
+    if (!catSelecionada) { alert('Selecione uma categoria antes de enviar.'); return }
+    const pendentes = filas.filter((f) => f.status === 'aguardando')
+    if (!pendentes.length) { alert('Adicione pelo menos uma foto.'); return }
 
-    setFazendoUpload(true);
+    setFazendoUpload(true)
 
-    for (const item of filas.filter((f) => f.status === 'aguardando')) {
-      // Marca como "enviando"
-      setFilas((prev) => prev.map((f) => f.id === item.id ? { ...f, status: 'enviando' } : f));
+    // Cria uma task por arquivo — cada task: comprime → faz upload → salva no DB
+    const tasks = pendentes.map((item) => async () => {
+      setItemStatus(item.id, { status: 'enviando' })
 
       try {
-        const url = await uploadFoto(item.file, catSelecionada);
+        // ── 1. Comprime no browser antes de enviar ──
+        const compressed = await compressImage(item.file, 2048, 0.85)
+        setItemStatus(item.id, { tamanhoComprimido: compressed.size })
 
-        // Salva na tabela 'fotos'
+        // Garante que o Blob tenha um nome para o Supabase inferir o tipo
+        const fileToUpload = compressed instanceof File
+          ? compressed
+          : new File([compressed], item.file.name, { type: compressed.type || 'image/webp' })
+
+        // ── 2. Upload para o Supabase Storage ──
+        const url = await uploadFoto(fileToUpload, catSelecionada)
+
+        // ── 3. Persiste na tabela 'fotos' ──
         const { error } = await supabase.from('fotos').insert({
           categoria_slug: catSelecionada,
           url,
           titulo: item.file.name.replace(/\.[^.]+$/, ''),
           ativo: true,
-        });
-        if (error) throw error;
+        })
+        if (error) throw error
 
-        setFilas((prev) => prev.map((f) => f.id === item.id ? { ...f, status: 'ok' } : f));
+        setItemStatus(item.id, { status: 'ok' })
       } catch (err) {
-        setFilas((prev) => prev.map((f) => f.id === item.id ? { ...f, status: 'erro', erro: err.message } : f));
+        setItemStatus(item.id, { status: 'erro', erro: err?.message ?? 'Erro desconhecido' })
       }
-    }
+    })
 
-    setFazendoUpload(false);
-    onUploadConcluido?.();
-  };
+    // ── Executa em paralelo com máximo de 3 simultâneos ──
+    // (evita timeout e throttling do Supabase)
+    await runWithConcurrency(tasks, 3)
 
-  const pendentes = filas.filter((f) => f.status === 'aguardando').length;
-  const concluidos = filas.filter((f) => f.status === 'ok').length;
+    setFazendoUpload(false)
+    onUploadConcluido?.()
+  }
+
+  const pendentes = filas.filter((f) => f.status === 'aguardando')
+  const concluidos = filas.filter((f) => f.status === 'ok')
+  const comErro = filas.filter((f) => f.status === 'erro')
+  const emAndamento = filas.filter((f) => f.status === 'enviando')
+
+  // Tamanho total economizado
+  const economizado = filas.reduce((acc, f) => {
+    if (f.tamanhoComprimido) return acc + (f.tamanhoOriginal - f.tamanhoComprimido)
+    return acc
+  }, 0)
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="font-display text-2xl text-white mb-1">Adicionar fotos</h2>
-        <p className="font-body text-sm text-white/40">Selecione a categoria e envie várias fotos de uma vez</p>
+        <p className="font-body text-sm text-white/40">
+          As fotos são comprimidas automaticamente antes do envio
+        </p>
       </div>
 
       {/* Seleção de categoria */}
@@ -331,28 +459,55 @@ function AbaUpload({ categorias, onUploadConcluido }) {
       {/* Fila de arquivos */}
       {filas.length > 0 && (
         <div className="bg-dark-100 rounded-2xl p-6 border border-dark-300">
-          <div className="flex items-center justify-between mb-4">
-            <p className="font-body text-sm text-white/70">
-              {concluidos}/{filas.length} enviadas
-              {pendentes > 0 && <span className="text-gold ml-2">· {pendentes} pendentes</span>}
-            </p>
-            <button
-              onClick={() => setFilas([])}
-              className="font-body text-xs text-white/30 hover:text-white/60 transition-colors"
-            >
-              Limpar lista
-            </button>
+          {/* Cabeçalho com progresso */}
+          <div className="mb-4">
+            {fazendoUpload || concluidos.length > 0 ? (
+              <ProgressBar
+                done={concluidos.length}
+                total={pendentes.length + concluidos.length + emAndamento.length + comErro.length}
+              />
+            ) : (
+              <div className="flex items-center justify-between">
+                <p className="font-body text-sm text-white/70">
+                  {pendentes.length} foto{pendentes.length !== 1 ? 's' : ''} selecionada{pendentes.length !== 1 ? 's' : ''}
+                </p>
+                <button
+                  onClick={() => {
+                    filas.forEach((f) => f.preview && URL.revokeObjectURL(f.preview))
+                    setFilas([])
+                  }}
+                  className="font-body text-xs text-white/30 hover:text-white/60 transition-colors"
+                >
+                  Limpar lista
+                </button>
+              </div>
+            )}
+
+            {/* Economia de tamanho */}
+            {economizado > 1024 && (
+              <p className="font-body text-xs text-green-400/70 mt-2">
+                ↓ {(economizado / 1024 / 1024).toFixed(1)} MB economizados com a compressão
+              </p>
+            )}
+
+            {/* Erros */}
+            {comErro.length > 0 && (
+              <p className="font-body text-xs text-red-400 mt-2">
+                ⚠ {comErro.length} foto{comErro.length !== 1 ? 's' : ''} com erro
+              </p>
+            )}
           </div>
 
+          {/* Grid de thumbnails */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-h-72 overflow-y-auto pr-1">
             {filas.map((item) => (
               <div key={item.id} className="relative rounded-xl overflow-hidden aspect-square group">
                 <img src={item.preview} alt="" className="w-full h-full object-cover" />
 
-                {/* Status overlay */}
-                <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300
-                  ${item.status === 'enviando' ? 'bg-dark/60' :
-                    item.status === 'ok' ? 'bg-green-500/30' :
+                {/* Overlay de status */}
+                <div className={`absolute inset-0 flex items-center justify-center transition-all duration-200
+                  ${item.status === 'enviando' ? 'bg-dark/70' :
+                    item.status === 'ok' ? 'bg-green-500/25' :
                     item.status === 'erro' ? 'bg-red-500/40' : 'bg-transparent'}`}>
                   {item.status === 'enviando' && (
                     <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -363,19 +518,19 @@ function AbaUpload({ categorias, onUploadConcluido }) {
                     </div>
                   )}
                   {item.status === 'erro' && (
-                    <span className="text-white text-xs px-2 text-center">
-                      Erro{item.erro ? `: ${item.erro}` : ''}
+                    <span className="text-white text-[10px] px-2 text-center leading-tight">
+                      {item.erro || 'Erro'}
                     </span>
                   )}
                 </div>
 
-                {/* Botão remover (só quando aguardando) */}
+                {/* Botão remover (só aguardando) */}
                 {item.status === 'aguardando' && (
                   <button
                     onClick={() => removerDaFila(item.id)}
                     className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-dark/80 text-white
                                flex items-center justify-center opacity-0 group-hover:opacity-100
-                               transition-opacity duration-200 hover:bg-red-500"
+                               transition-opacity duration-200 hover:bg-red-500 text-sm leading-none"
                   >
                     ×
                   </button>
@@ -387,153 +542,40 @@ function AbaUpload({ categorias, onUploadConcluido }) {
       )}
 
       {/* Botão enviar */}
-      {pendentes > 0 && (
+      {pendentes.length > 0 && !fazendoUpload && (
         <button
           onClick={enviarTudo}
-          disabled={fazendoUpload || !catSelecionada}
+          disabled={!catSelecionada}
           className="btn-gold w-full justify-center py-4 text-base disabled:opacity-50"
         >
-          {fazendoUpload
-            ? 'Enviando...'
-            : `Enviar ${pendentes} foto${pendentes > 1 ? 's' : ''} para "${catSelecionada || '...'}"`}
+          Enviar {pendentes.length} foto{pendentes.length !== 1 ? 's' : ''}
+          {catSelecionada ? ` para "${catSelecionada}"` : ''}
           <span className="btn-arrow">→</span>
         </button>
       )}
-    </div>
-  );
-}
 
-// ─────────────────────────────────────────────────────────────────
-//  ABA: GERENCIAR FOTOS
-// ─────────────────────────────────────────────────────────────────
-function AbaFotos({ categorias }) {
-  const [catAtiva, setCatAtiva] = useState('');
-  const [fotos, setFotos] = useState([]);
-  const [carregando, setCarregando] = useState(false);
-
-  useEffect(() => {
-    if (categorias.length && !catAtiva) setCatAtiva(categorias[0]?.slug || '');
-  }, [categorias]);
-
-  useEffect(() => {
-    if (!catAtiva) return;
-    setCarregando(true);
-    supabase
-      .from('fotos')
-      .select('*')
-      .eq('categoria_slug', catAtiva)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        setFotos(data || []);
-        setCarregando(false);
-      });
-  }, [catAtiva]);
-
-  const toggleAtivo = async (foto) => {
-    const novoValor = !foto.ativo;
-    await supabase.from('fotos').update({ ativo: novoValor }).eq('id', foto.id);
-    setFotos((prev) => prev.map((f) => f.id === foto.id ? { ...f, ativo: novoValor } : f));
-  };
-
-  const excluir = async (foto) => {
-    if (!confirm(`Excluir a foto "${foto.titulo}"? Esta ação não pode ser desfeita.`)) return;
-    await deleteFotoStorage(foto.url);
-    await supabase.from('fotos').delete().eq('id', foto.id);
-    setFotos((prev) => prev.filter((f) => f.id !== foto.id));
-  };
-
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h2 className="font-display text-2xl text-white mb-1">Gerenciar fotos</h2>
-        <p className="font-body text-sm text-white/40">Ative, desative ou exclua fotos por categoria</p>
-      </div>
-
-      {/* Tabs de categoria */}
-      <div className="flex flex-wrap gap-2">
-        {categorias.map((cat) => (
-          <button
-            key={cat.slug}
-            onClick={() => setCatAtiva(cat.slug)}
-            className={`px-4 py-2 rounded-full font-body text-sm border transition-all duration-200 active:scale-95
-              ${catAtiva === cat.slug
-                ? 'bg-gold text-dark border-gold font-semibold'
-                : 'border-dark-300 text-white/60 hover:border-gold/40 hover:text-white'
-              }`}
-          >
-            {cat.nome}
-          </button>
-        ))}
-      </div>
-
-      {/* Grid de fotos */}
-      {carregando ? (
-        <div className="flex justify-center py-20">
-          <div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : fotos.length === 0 ? (
-        <div className="text-center py-20 text-white/30 font-body">
-          Nenhuma foto nessa categoria ainda.
-        </div>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {fotos.map((foto) => (
-            <div
-              key={foto.id}
-              className={`rounded-xl overflow-hidden border transition-all duration-300 group
-                ${foto.ativo ? 'border-dark-300' : 'border-red-500/30 opacity-60'}`}
-            >
-              {/* Imagem */}
-              <div className="aspect-square relative overflow-hidden">
-                <img src={foto.url} alt={foto.titulo} className="w-full h-full object-cover" />
-                {!foto.ativo && (
-                  <div className="absolute inset-0 bg-dark/60 flex items-center justify-center">
-                    <span className="font-body text-xs text-white/70 bg-dark/80 px-2 py-1 rounded-full">
-                      Oculta
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Rodapé do card */}
-              <div className="bg-dark-200 p-3">
-                <p className="font-body text-xs text-white/60 truncate mb-2">{foto.titulo}</p>
-                <div className="flex items-center gap-2">
-                  {/* Toggle visível/oculto */}
-                  <button
-                    onClick={() => toggleAtivo(foto)}
-                    title={foto.ativo ? 'Ocultar do site' : 'Mostrar no site'}
-                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg
-                                font-body text-xs border transition-all duration-200 active:scale-95
-                                ${foto.ativo
-                                  ? 'border-green-500/30 text-green-400 hover:bg-green-500/10'
-                                  : 'border-dark-300 text-white/40 hover:border-gold/40 hover:text-white'
-                                }`}
-                  >
-                    <Icon.Eye off={!foto.ativo} />
-                    {foto.ativo ? 'Visível' : 'Oculta'}
-                  </button>
-
-                  {/* Excluir */}
-                  <button
-                    onClick={() => excluir(foto)}
-                    title="Excluir foto"
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-dark-300
-                               text-white/30 hover:border-red-500/50 hover:text-red-400
-                               transition-all duration-200 active:scale-95"
-                  >
-                    <Icon.Trash />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+      {fazendoUpload && (
+        <div className="text-center font-body text-sm text-white/50 py-2">
+          Enviando em paralelo (3 fotos simultâneas)…
         </div>
       )}
-    </div>
-  );
-}
 
+      {/* Botão tentar novamente erros */}
+      {comErro.length > 0 && !fazendoUpload && (
+        <button
+          onClick={() => {
+            setFilas((prev) => prev.map((f) =>
+              f.status === 'erro' ? { ...f, status: 'aguardando', erro: '' } : f
+            ))
+          }}
+          className="btn-outline w-full justify-center py-3 text-sm text-red-400 border-red-400/30 hover:border-red-400"
+        >
+          Tentar novamente ({comErro.length} com erro)
+        </button>
+      )}
+    </div>
+  )
+}
 // ─────────────────────────────────────────────────────────────────
 //  ABA: CATEGORIAS
 // ─────────────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
-// ── Default data (placeholders — client replaces via dashboard) ──
+// ── Defaults ──
 const DEFAULT_CATEGORIES = [
   { id: 'ensaios-externo', label: 'Ensaios Externo', tag: 'Ensaios' },
   { id: 'ensaios-estudio', label: 'Ensaios Estúdio', tag: 'Ensaios' },
@@ -11,16 +11,6 @@ const DEFAULT_CATEGORIES = [
   { id: 'infantil', label: 'Crianças', tag: 'Infantil' },
   { id: 'gravidas', label: 'Grávidas', tag: 'Grávidas' },
 ]
-
-const DEFAULT_PHOTOS = {
-  'ensaios-externo': [],
-  'ensaios-estudio': [],
-  'casamentos': [],
-  'batizados': [],
-  'aniversarios': [],
-  'infantil': [],
-  'gravidas': [],
-}
 
 const getTagFromSlug = (slug = '', nome = '') => {
   const text = `${slug} ${nome}`.toLowerCase()
@@ -34,7 +24,9 @@ const getTagFromSlug = (slug = '', nome = '') => {
 const GalleryContext = createContext(null)
 
 export function GalleryProvider({ children }) {
+  // Refs para controle de loading sem causar re-renders extras
   const loadedCategoryIdsRef = useRef(new Set())
+  const loadingRef = useRef({})          // substitui loadingPhotosByCategory nas guards
 
   const [categories, setCategories] = useState(() => {
     try {
@@ -43,24 +35,27 @@ export function GalleryProvider({ children }) {
     } catch { return DEFAULT_CATEGORIES }
   })
 
-  const [photos, setPhotos] = useState(DEFAULT_PHOTOS)
+  const [photos, setPhotos] = useState({})
   const [loadingPhotosByCategory, setLoadingPhotosByCategory] = useState({})
 
+  // Persiste categorias no localStorage (sem fotos — dados demais)
   useEffect(() => {
     localStorage.setItem('il_categories', JSON.stringify(categories))
   }, [categories])
 
+  // ── Sync inicial: 2 queries no total (era N+1) ──
   useEffect(() => {
     let ativo = true
 
     const syncFromSupabase = async () => {
+      // Query 1: categorias ativas
       const { data: categoriasDb, error: erroCategorias } = await supabase
         .from('categorias')
-        .select('nome, slug, ativo')
+        .select('nome, slug')
         .eq('ativo', true)
         .order('nome')
 
-      if (erroCategorias || !categoriasDb) return
+      if (erroCategorias || !categoriasDb || !ativo) return
 
       const categoriasMapeadas = categoriasDb.map((cat) => ({
         id: cat.slug,
@@ -68,115 +63,132 @@ export function GalleryProvider({ children }) {
         tag: getTagFromSlug(cat.slug, cat.nome),
       }))
 
-      const slugs = categoriasMapeadas.map((cat) => cat.id)
-      const baseFotos = Object.fromEntries(slugs.map((slug) => [slug, []]))
+      const slugs = categoriasMapeadas.map((c) => c.id)
+      const baseFotos = Object.fromEntries(slugs.map((s) => [s, []]))
 
-      let fotosPorCategoria = { ...baseFotos }
-      if (slugs.length > 0) {
-        const covers = await Promise.all(
-          slugs.map(async (slug) => {
-            const { data, error } = await supabase
-              .from('fotos')
-              .select('id, categoria_slug, url')
-              .eq('ativo', true)
-              .eq('categoria_slug', slug)
-              .order('created_at', { ascending: false })
-              .limit(1)
+      if (slugs.length === 0) {
+        if (ativo) { setCategories(categoriasMapeadas); setPhotos(baseFotos) }
+        return
+      }
 
-            if (error || !data?.length) return { slug, cover: null }
+      // ────────────────────────────────────────────────────────────────────
+      // CORREÇÃO PRINCIPAL: 1 única query com .in() em vez de N queries
+      // paralelas (Promise.all com N .eq('categoria_slug', slug)).
+      // Buscamos as fotos mais recentes de todas as categorias de uma vez
+      // e agrupamos no cliente — 1 roundtrip vs N roundtrips.
+      // ────────────────────────────────────────────────────────────────────
+      const { data: coverPhotos, error: erroCovers } = await supabase
+        .from('fotos')
+        .select('id, categoria_slug, url')
+        .eq('ativo', true)
+        .in('categoria_slug', slugs)
+        .order('created_at', { ascending: false })
+        .limit(500) // suficiente para portfólios reais; ajuste se necessário
 
-            const foto = data[0]
-            return {
-              slug,
-              cover: {
-                id: String(foto.id),
-                url: foto.url,
-                views: 0,
-                likes: 0,
-              },
-            }
+      if (!ativo) return
+
+      const fotosPorCategoria = { ...baseFotos }
+
+      if (!erroCovers && coverPhotos) {
+        // Agrupa no cliente — pega a 1ª ocorrência (mais recente) de cada categoria
+        for (const foto of coverPhotos) {
+          const slug = foto.categoria_slug
+          if (!fotosPorCategoria[slug]) fotosPorCategoria[slug] = []
+          fotosPorCategoria[slug].push({
+            id: String(foto.id),
+            url: foto.url,
+            views: 0,
+            likes: 0,
           })
-        )
+        }
 
-        fotosPorCategoria = covers.reduce((acc, item) => {
-          if (item.cover) acc[item.slug] = [item.cover]
-          return acc
-        }, { ...baseFotos })
+        // Marca categorias com fotos como "já carregadas" para evitar re-fetch
+        for (const slug of slugs) {
+          if (fotosPorCategoria[slug]?.length > 0) {
+            loadedCategoryIdsRef.current.add(slug)
+          }
+        }
       }
 
-      if (ativo) {
-        loadedCategoryIdsRef.current = new Set()
-        setCategories(categoriasMapeadas)
-        setPhotos(fotosPorCategoria)
-      }
+      setCategories(categoriasMapeadas)
+      setPhotos(fotosPorCategoria)
     }
 
     syncFromSupabase()
     return () => { ativo = false }
   }, [])
 
+  // ── Carregamento lazy por categoria ──
+  // CORREÇÃO: deps vazias + ref para guard de loading (evita stale closure
+  // e re-criação da função a cada mudança de loadingPhotosByCategory)
   const ensureCategoryPhotosLoaded = useCallback(async (categoryId) => {
-    if (!categoryId || loadingPhotosByCategory[categoryId] || loadedCategoryIdsRef.current.has(categoryId)) return
+    if (!categoryId) return
+    if (loadingRef.current[categoryId]) return           // já está carregando
+    if (loadedCategoryIdsRef.current.has(categoryId)) return // já carregado
 
+    loadingRef.current[categoryId] = true
     setLoadingPhotosByCategory((prev) => ({ ...prev, [categoryId]: true }))
 
-    const { data: fotosDb, error: erroFotos } = await supabase
-      .from('fotos')
-      .select('id, categoria_slug, url, ativo')
-      .eq('ativo', true)
-      .eq('categoria_slug', categoryId)
-      .order('created_at', { ascending: false })
+    try {
+      const { data: fotosDb, error } = await supabase
+        .from('fotos')
+        .select('id, categoria_slug, url')
+        .eq('ativo', true)
+        .eq('categoria_slug', categoryId)
+        .order('created_at', { ascending: false })
 
-    if (!erroFotos && fotosDb) {
-      const mapped = fotosDb.map((foto) => ({
-        id: String(foto.id),
-        url: foto.url,
-        views: 0,
-        likes: 0,
-      }))
-      setPhotos((prev) => ({ ...prev, [categoryId]: mapped }))
-      loadedCategoryIdsRef.current.add(categoryId)
+      if (!error && fotosDb) {
+        const mapped = fotosDb.map((f) => ({
+          id: String(f.id),
+          url: f.url,
+          views: 0,
+          likes: 0,
+        }))
+        setPhotos((prev) => ({ ...prev, [categoryId]: mapped }))
+        loadedCategoryIdsRef.current.add(categoryId)
+      }
+    } finally {
+      loadingRef.current[categoryId] = false
+      setLoadingPhotosByCategory((prev) => ({ ...prev, [categoryId]: false }))
     }
+  }, []) // deps vazias — usa refs para não ter stale closure
 
-    setLoadingPhotosByCategory((prev) => ({ ...prev, [categoryId]: false }))
-  }, [loadingPhotosByCategory])
-
-  // ── Category CRUD ──
-  const addCategory = (cat) => setCategories(prev => [...prev, cat])
+  // ── CRUD de categorias ──
+  const addCategory = (cat) => setCategories((prev) => [...prev, cat])
   const removeCategory = (id) => {
-    setCategories(prev => prev.filter(c => c.id !== id))
-    setPhotos(prev => { const n = { ...prev }; delete n[id]; return n })
+    setCategories((prev) => prev.filter((c) => c.id !== id))
+    setPhotos((prev) => { const n = { ...prev }; delete n[id]; return n })
   }
   const updateCategory = (id, data) =>
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, ...data } : c))
+    setCategories((prev) => prev.map((c) => c.id === id ? { ...c, ...data } : c))
 
-  // ── Photo CRUD ──
+  // ── CRUD de fotos ──
   const addPhoto = (categoryId, photo) =>
-    setPhotos(prev => ({
+    setPhotos((prev) => ({
       ...prev,
       [categoryId]: [...(prev[categoryId] || []), photo],
     }))
 
   const removePhoto = (categoryId, photoId) =>
-    setPhotos(prev => ({
+    setPhotos((prev) => ({
       ...prev,
-      [categoryId]: prev[categoryId].filter(p => p.id !== photoId),
+      [categoryId]: prev[categoryId].filter((p) => p.id !== photoId),
     }))
 
   const reorderPhotos = (categoryId, newOrder) =>
-    setPhotos(prev => ({ ...prev, [categoryId]: newOrder }))
+    setPhotos((prev) => ({ ...prev, [categoryId]: newOrder }))
 
   const setCoverPhoto = (categoryId, photoId) =>
-    setPhotos(prev => {
+    setPhotos((prev) => {
       const arr = [...(prev[categoryId] || [])]
-      const idx = arr.findIndex(p => p.id === photoId)
+      const idx = arr.findIndex((p) => p.id === photoId)
       if (idx > 0) { const [p] = arr.splice(idx, 1); arr.unshift(p) }
       return { ...prev, [categoryId]: arr }
     })
 
-  // ── All photos flat (for Trabalhos grid) ──
+  // Flat de todas as fotos para o grid de Trabalhos
   const allPhotos = Object.entries(photos).flatMap(([catId, arr]) =>
-    arr.map(p => ({ ...p, categoryId: catId }))
+    arr.map((p) => ({ ...p, categoryId: catId }))
   )
 
   return (
