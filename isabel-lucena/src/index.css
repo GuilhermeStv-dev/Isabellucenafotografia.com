@@ -46,8 +46,13 @@
     @apply bg-gold text-dark;
     box-shadow: 0 4px 24px rgba(201,169,110,0.35);
   }
+  .btn-primary .btn-arrow {
+    /* arrow should follow button text color (white by default) */
+    @apply text-white;
+  }
   .btn-primary:hover .btn-arrow {
     transform: rotate(-45deg);
+    @apply text-dark;
   }
 
   /* ─── Botão sólido dourado ─── */
@@ -64,10 +69,6 @@
 
   .btn-arrow {
     @apply transition-transform duration-300 text-dark;
-  }
-
-  .btn-primary:hover .btn-arrow {
-    @apply text-dark;
   }
 
   /* ─── Scrollbar ─── */

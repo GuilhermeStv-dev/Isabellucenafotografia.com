@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase, uploadFoto, deleteFotoStorage } from '../lib/supabase';
 import LogoBranca from '../assets/Logo-horzontal-branca.png';
+import LogoPreta from '../assets/Logo-horzontal-preta.png';
 
 // ─────────────────────────────────────────────────────────────────
 //  ÍCONES SVG inline (sem dependência extra)
@@ -713,11 +714,8 @@ export default function Dashboard() {
       <aside className="hidden md:flex w-64 bg-dark-100 border-r border-dark-300 flex-col shrink-0">
         {/* Logo */}
         <div className="p-6 border-b border-dark-300 flex items-center gap-2.5">
-          <Icon.Camera />
-          <div>
-            <p className="font-display text-white text-base font-semibold italic">Isabel Lucena</p>
-            <p className="font-body text-[10px] text-gold/60 tracking-[0.2em] uppercase">Painel</p>
-          </div>
+          <img src={LogoBranca} alt="Isabel Lucena" className="h-8 w-auto object-contain" />
+          <span className="font-body text-[10px] text-gold/60 tracking-[0.2em] uppercase">Painel</span>
         </div>
 
         {/* Nav */}
@@ -760,8 +758,8 @@ export default function Dashboard() {
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-dark-100 border-b border-dark-300
                       flex items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
-          <Icon.Camera />
-          <p className="font-display text-white text-sm font-semibold italic">Painel Isabel</p>
+          <img src={LogoBranca} alt="Isabel Lucena" className="h-6 w-auto object-contain" />
+          <p className="font-display text-white text-sm font-semibold italic">Painel</p>
         </div>
         <button
           onClick={() => setMenuAberto(!menuAberto)}
