@@ -16,16 +16,21 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 /** Faz upload de um arquivo e retorna a URL pública */
 export async function uploadFoto(file, categoria) {
   const ext = file.name.split('.').pop();
-  const nome = `${categoria}/${Date.now()}.${ext}`;
+  // generate a more robust unique name to avoid collisions
+  const nome = `${categoria}/${Date.now()}-${Math.floor(Math.random()*1e6)}.${ext}`;
 
-  const { error } = await supabase.storage
+  const { data, error } = await supabase.storage
     .from('fotos')
-    .upload(nome, file, { cacheControl: '3600', upsert: false });
+    // allow upsert so repeated uploads with same name don't blow up
+    .upload(nome, file, { cacheControl: '3600', upsert: true });
 
-  if (error) throw error;
+  if (error) {
+    console.error('upload failed', { nome, error });
+    throw error;
+  }
+  console.log('upload succeeded', { nome, data });
 
-  const { data } = supabase.storage.from('fotos').getPublicUrl(nome);
-  return data.publicUrl;
+  return supabase.storage.from('fotos').getPublicUrl(nome).data.publicUrl;
 }
 
 /** Deleta uma foto do Storage pela URL pública */

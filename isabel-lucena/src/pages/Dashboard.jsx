@@ -331,7 +331,9 @@ function AbaUpload({ categorias, onUploadConcluido }) {
                     </div>
                   )}
                   {item.status === 'erro' && (
-                    <span className="text-white text-xs px-2 text-center">Erro</span>
+                    <span className="text-white text-xs px-2 text-center">
+                      Erro{item.erro ? `: ${item.erro}` : ''}
+                    </span>
                   )}
                 </div>
 
