@@ -1,6 +1,5 @@
 import { useState, useMemo, memo } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
 import trabalhoContainer from '../assets/trabalho-container.webp'
@@ -78,14 +77,6 @@ const CategoryCard = memo(({ cat, coverPhoto }) => {
           <div>
             <p className="text-gold text-[10px] tracking-widest uppercase mb-1">{cat.tag}</p>
             <h3 className="font-display text-xl italic text-white">{cat.label}</h3>
-          </div>
-          <div className="w-8 h-8 rounded-full border border-white/30 flex items-center justify-center
-                          group-hover:border-gold group-hover:shadow-[0_0_12px_rgba(201,169,110,0.4)]
-                          transition-all duration-300">
-            <ArrowRight
-              size={13}
-              className="text-white group-hover:text-gold group-hover:rotate-[-45deg] transition-all duration-300"
-            />
           </div>
         </div>
       </div>

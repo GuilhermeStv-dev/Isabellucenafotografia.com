@@ -150,6 +150,76 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
 
 CategoryCard.displayName = 'CategoryCard'
 
+const MobileCarouselCard = memo(({ cat, imgSrc, index }) => {
+  const [loaded, setLoaded] = useState(false)
+
+  return (
+    <Link
+      to={`/galeria/${cat.id}`}
+      className="group relative shrink-0 rounded-2xl overflow-hidden bg-dark-200"
+      style={{
+        scrollSnapAlign: 'start',
+        scrollSnapStop: 'always',
+        width: 'min(75vw, 260px)',
+        aspectRatio: '3/4',
+      }}
+    >
+      {/* Skeleton — some quando imagem carrega */}
+      <div
+        style={{ opacity: loaded ? 0 : 1, transition: 'opacity 0.3s ease', pointerEvents: 'none' }}
+        className="absolute inset-0"
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(90deg, #1A1A1A 0%, #2E2E2E 50%, #1A1A1A 100%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 1.4s infinite linear',
+          }}
+        />
+        <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col gap-2">
+          <div className="h-2 w-16 rounded-full bg-white/10" />
+          <div className="h-4 w-28 rounded-full bg-white/15" />
+        </div>
+      </div>
+
+      {/* Conteúdo real — aparece completo só quando imagem carrega */}
+      <div
+        style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
+        className="absolute inset-0"
+      >
+        {imgSrc && (
+          <img
+            src={imgSrc.src}
+            srcSet={imgSrc.srcSet}
+            sizes="75vw"
+            alt={cat.label}
+            loading="eager"
+            decoding="async"
+            onLoad={() => setLoaded(true)}
+            onError={() => setLoaded(true)}
+            className="absolute inset-0 w-full h-full object-cover
+                       transition-transform duration-500 group-active:scale-105"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <span className="inline-block font-body text-[9px] tracking-[0.2em] uppercase
+                           text-gold border border-gold/30 rounded-full px-2 py-0.5 mb-2
+                           bg-black/30 backdrop-blur-sm">
+            {cat.tag}
+          </span>
+          <h3 className="font-display text-lg italic text-white">{cat.label}</h3>
+        </div>
+        <div className="absolute top-3.5 left-3.5 font-body text-[10px] text-white/40 tracking-wider">
+          {String(index + 1).padStart(2, '0')}
+        </div>
+      </div>
+    </Link>
+  )
+})
+MobileCarouselCard.displayName = 'MobileCarouselCard'
+
 /* ═══════════════════════════════════════════════════
    DEPOIMENTOS
 ═══════════════════════════════════════════════════ */
@@ -386,62 +456,20 @@ export default function Home() {
                     const coverPhoto = photos[cat.id]?.[0]
                     const imgSrc = coverPhoto?.url
                       ? getResponsiveImageSources(coverPhoto.url, {
-                        widths: [320, 480],
-                        qualities: [70, 75],
-                        fallbackWidth: 480,
-                        fallbackQuality: 75,
-                      })
+                      widths: [320, 480],
+                      qualities: [70, 75],
+                      fallbackWidth: 480,
+                      fallbackQuality: 75,
+                    })
                       : null
 
                     return (
-                      <Link
+                      <MobileCarouselCard
                         key={cat.id}
-                        to={`/galeria/${cat.id}`}
-                        className="group relative shrink-0 rounded-2xl overflow-hidden bg-dark-200"
-                        style={{
-                          scrollSnapAlign: 'start',
-                          scrollSnapStop: 'always',
-                          width: 'min(75vw, 260px)',
-                          aspectRatio: '3/4',
-                        }}
-                      >
-                        {imgSrc ? (
-                          <img
-                            src={imgSrc.src}
-                            srcSet={imgSrc.srcSet}
-                            sizes="75vw"
-                            alt={cat.label}
-                            loading="eager"
-                            decoding="async"
-                            className="absolute inset-0 w-full h-full object-cover
-                                       transition-transform duration-500 group-active:scale-105"
-                            onError={(e) => {
-                              if (imgSrc.fallbackSrc && e.currentTarget.src !== imgSrc.fallbackSrc) {
-                                e.currentTarget.src = imgSrc.fallbackSrc
-                                e.currentTarget.srcset = ''
-                              }
-                            }}
-                          />
-                        ) : (
-                          <div className="absolute inset-0 bg-dark-300 animate-pulse" />
-                        )}
-
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <span className="inline-block font-body text-[9px] tracking-[0.2em] uppercase
-                                           text-gold border border-gold/30 rounded-full px-2 py-0.5 mb-2
-                                           bg-black/30 backdrop-blur-sm">
-                            {cat.tag}
-                          </span>
-                          <h3 className="font-display text-lg italic text-white">{cat.label}</h3>
-                        </div>
-
-                        <div className="absolute top-3.5 left-3.5
-                                        font-body text-[10px] text-white/40 tracking-wider">
-                          {String(i + 1).padStart(2, '0')}
-                        </div>
-                      </Link>
+                        cat={cat}
+                        imgSrc={imgSrc}
+                        index={i}
+                      />
                     )
                   })}
 
