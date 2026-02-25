@@ -47,11 +47,8 @@ const revealStyle = (delay = 0) => ({
    SUB-COMPONENTES
 ═══════════════════════════════════════════════════ */
 
-// CategoryCard com reveal auto-contido:
-// não depende do useReveal() do pai (que roda antes dos dados do Supabase)
 const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
-  const wrapperRef = useRef(null)
-  const revealed = useRef(false)
+  const [loaded, setLoaded] = useState(false)
 
   const imgSrc = useMemo(() => {
     if (!coverPhoto?.url) return null
@@ -63,35 +60,6 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
     })
   }, [coverPhoto?.url])
 
-  // Reveal auto-contido: monta o observer no próprio mount do card,
-  // não importa quando o pai renderizou pela primeira vez
-  useEffect(() => {
-    const el = wrapperRef.current
-    if (!el || revealed.current) return
-
-    const delay = index * 80
-
-    // Aplica estado inicial via DOM (não via JSX) para evitar reset pelo React
-    el.style.opacity = '0'
-    el.style.transform = 'translateY(28px)'
-    el.style.transition = `opacity 0.7s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms,
-                           transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms`
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.style.opacity = '1'
-          el.style.transform = 'translateY(0)'
-          revealed.current = true  // nunca volta a opacity:0
-          observer.unobserve(el)
-        }
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -60px 0px' }
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [index]) // index é estável — efeito só roda no mount
-
   const desktopClass = {
     tall: 'md:row-span-2',
     wide: 'md:col-span-2',
@@ -99,14 +67,44 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
   }[layout] || ''
 
   return (
-    // wrapper div recebe o ref do reveal — Link não precisa mais de data-reveal
-    <div ref={wrapperRef} className={`aspect-[3/4] ${desktopClass}`}>
-      <Link
-        to={`/galeria/${cat.id}`}
-        className="group relative overflow-hidden rounded-2xl bg-dark-200
-                   block w-full h-full"
+    <Link
+      to={`/galeria/${cat.id}`}
+      data-reveal
+      className={`group relative overflow-hidden rounded-2xl bg-dark-200
+                  aspect-[3/4] ${desktopClass}`}
+      style={revealStyle(index * 80)}
+    >
+      {/* Skeleton — some quando imagem carrega */}
+      <div
+        style={{ opacity: loaded ? 0 : 1, transition: 'opacity 0.3s ease', pointerEvents: 'none' }}
+        className="absolute inset-0"
       >
-        {imgSrc ? (
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(90deg, #1A1A1A 0%, #2E2E2E 50%, #1A1A1A 100%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 1.4s infinite linear',
+          }}
+        />
+        <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col gap-2">
+          <div className="h-2 w-16 rounded-full bg-white/10" />
+          <div className="h-4 w-28 rounded-full bg-white/15" />
+        </div>
+        <style>{`
+          @keyframes shimmer {
+            0%   { background-position: 200% 0 }
+            100% { background-position: -200% 0 }
+          }
+        `}</style>
+      </div>
+
+      {/* Conteúdo real — aparece completo quando imagem carrega */}
+      <div
+        style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
+        className="absolute inset-0"
+      >
+        {imgSrc && (
           <img
             src={imgSrc.src}
             srcSet={imgSrc.srcSet}
@@ -114,23 +112,15 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
             alt={cat.label}
             loading={index < 2 ? 'eager' : 'lazy'}
             decoding="async"
+            onLoad={() => setLoaded(true)}
+            onError={() => setLoaded(true)}
             className="absolute inset-0 w-full h-full object-cover
                        transition-transform duration-700 ease-out
                        group-hover:scale-105 will-change-transform"
-            onError={(e) => {
-              if (imgSrc.fallbackSrc && e.currentTarget.src !== imgSrc.fallbackSrc) {
-                e.currentTarget.src = imgSrc.fallbackSrc
-                e.currentTarget.srcset = ''
-              }
-            }}
           />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-dark-300 to-dark-200 animate-pulse" />
         )}
-
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
-
         <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5
                         translate-y-0 group-hover:-translate-y-1 transition-transform duration-300">
           <span className="inline-block font-body text-[9px] tracking-[0.25em] uppercase
@@ -142,9 +132,7 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
             {cat.label}
           </h3>
         </div>
-
-        <div className="absolute top-3.5 right-3.5
-                        w-8 h-8 rounded-full
+        <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full
                         border border-white/20 bg-black/20 backdrop-blur-sm
                         flex items-center justify-center
                         opacity-0 group-hover:opacity-100
@@ -155,8 +143,8 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
               stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-      </Link>
-    </div>
+      </div>
+    </Link>
   )
 }, (prev, next) => prev.coverPhoto?.url === next.coverPhoto?.url && prev.cat.id === next.cat.id)
 

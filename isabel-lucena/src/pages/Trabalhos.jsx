@@ -9,7 +9,7 @@ const TAGS = ['Todos', 'Ensaios', 'Grávidas', 'Infantil', 'Wedding', 'Eventos']
 
 function CardSkeleton() {
   return (
-    <div className="rounded-2xl aspect-[3/4] bg-dark-200 overflow-hidden relative">
+    <div className="absolute inset-0">
       <div
         className="absolute inset-0"
         style={{
@@ -50,50 +50,45 @@ const CategoryCard = memo(({ cat, coverPhoto }) => {
       to={`/galeria/${cat.id}`}
       className="group block relative overflow-hidden rounded-2xl aspect-[3/4] bg-dark-200"
     >
-      {!loaded && <CardSkeleton />}
-
-      {coverImage ? (
-        <img
-          src={coverImage.src}
-          srcSet={coverImage.srcSet}
-          sizes="(min-width: 768px) 33vw, 50vw"
-          alt={cat.label}
-          loading="lazy"
-          decoding="async"
-          onLoad={() => setLoaded(true)}
-          onError={(e) => {
-            setLoaded(true)
-            if (coverImage.fallbackSrc && e.currentTarget.src !== coverImage.fallbackSrc) {
-              e.currentTarget.src = coverImage.fallbackSrc
-              e.currentTarget.srcset = ''
-            }
-          }}
-          style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 will-change-transform"
-        />
-      ) : (
+      {/* Skeleton sempre montado, some quando carrega */}
+      <div style={{ opacity: loaded ? 0 : 1, transition: 'opacity 0.3s ease', pointerEvents: 'none' }}
+           className="absolute inset-0">
         <CardSkeleton />
-      )}
+      </div>
 
-      {loaded && (
-        <>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
-            <div>
-              <p className="text-gold text-[10px] tracking-widest uppercase mb-1">{cat.tag}</p>
-              <h3 className="font-display text-xl italic text-white">{cat.label}</h3>
-            </div>
-            <div className="w-8 h-8 rounded-full border border-white/30 flex items-center justify-center
-                            group-hover:border-gold group-hover:shadow-[0_0_12px_rgba(201,169,110,0.4)]
-                            transition-all duration-300">
-              <ArrowRight
-                size={13}
-                className="text-white group-hover:text-gold group-hover:rotate-[-45deg] transition-all duration-300"
-              />
-            </div>
+      {/* Imagem + overlay: invisível até carregar completamente */}
+      <div style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
+           className="absolute inset-0">
+        {coverImage && (
+          <img
+            src={coverImage.src}
+            srcSet={coverImage.srcSet}
+            sizes="(min-width: 768px) 33vw, 50vw"
+            alt={cat.label}
+            loading="lazy"
+            decoding="async"
+            onLoad={() => setLoaded(true)}
+            onError={() => setLoaded(true)}
+            className="absolute inset-0 w-full h-full object-cover
+                       transition-transform duration-700 group-hover:scale-105 will-change-transform"
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-4 flex items-end justify-between">
+          <div>
+            <p className="text-gold text-[10px] tracking-widest uppercase mb-1">{cat.tag}</p>
+            <h3 className="font-display text-xl italic text-white">{cat.label}</h3>
           </div>
-        </>
-      )}
+          <div className="w-8 h-8 rounded-full border border-white/30 flex items-center justify-center
+                          group-hover:border-gold group-hover:shadow-[0_0_12px_rgba(201,169,110,0.4)]
+                          transition-all duration-300">
+            <ArrowRight
+              size={13}
+              className="text-white group-hover:text-gold group-hover:rotate-[-45deg] transition-all duration-300"
+            />
+          </div>
+        </div>
+      </div>
     </Link>
   )
 }, (prev, next) =>
@@ -125,11 +120,17 @@ export default function Trabalhos() {
   const { categories, photos } = useGallery()
   const [activeTag, setActiveTag] = useState('Todos')
 
+  // Apenas categorias que têm pelo menos 1 foto cadastrada
+  const categoriesWithPhotos = useMemo(
+    () => categories.filter((cat) => photos[cat.id]?.length > 0),
+    [categories, photos]
+  )
+
   const filtered = useMemo(
     () => activeTag === 'Todos'
-      ? categories
-      : categories.filter((c) => c.tag === activeTag),
-    [categories, activeTag]
+      ? categoriesWithPhotos
+      : categoriesWithPhotos.filter((c) => c.tag === activeTag),
+    [categoriesWithPhotos, activeTag]
   )
 
   return (
