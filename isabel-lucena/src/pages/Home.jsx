@@ -11,6 +11,8 @@ import FotoIsabel4 from '../assets/Foto-Isabel4.webp'
    HOOKS
 ═══════════════════════════════════════════════════ */
 
+// useReveal: só para elementos ESTÁTICOS que existem no DOM no mount
+// NÃO usar em componentes que dependem de dados assíncronos
 function useReveal(ref) {
   useEffect(() => {
     const elements = ref?.current
@@ -45,7 +47,12 @@ const revealStyle = (delay = 0) => ({
    SUB-COMPONENTES
 ═══════════════════════════════════════════════════ */
 
+// CategoryCard com reveal auto-contido:
+// não depende do useReveal() do pai (que roda antes dos dados do Supabase)
 const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
+  const wrapperRef = useRef(null)
+  const revealed = useRef(false)
+
   const imgSrc = useMemo(() => {
     if (!coverPhoto?.url) return null
     return getResponsiveImageSources(coverPhoto.url, {
@@ -56,6 +63,35 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
     })
   }, [coverPhoto?.url])
 
+  // Reveal auto-contido: monta o observer no próprio mount do card,
+  // não importa quando o pai renderizou pela primeira vez
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el || revealed.current) return
+
+    const delay = index * 80
+
+    // Aplica estado inicial via DOM (não via JSX) para evitar reset pelo React
+    el.style.opacity = '0'
+    el.style.transform = 'translateY(28px)'
+    el.style.transition = `opacity 0.7s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms,
+                           transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms`
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.style.opacity = '1'
+          el.style.transform = 'translateY(0)'
+          revealed.current = true  // nunca volta a opacity:0
+          observer.unobserve(el)
+        }
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -60px 0px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [index]) // index é estável — efeito só roda no mount
+
   const desktopClass = {
     tall: 'md:row-span-2',
     wide: 'md:col-span-2',
@@ -63,63 +99,64 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
   }[layout] || ''
 
   return (
-    <Link
-      to={`/galeria/${cat.id}`}
-      data-reveal
-      className={`group relative overflow-hidden rounded-2xl bg-dark-200
-                  aspect-[3/4] ${desktopClass}`}
-      style={revealStyle(index * 80)}
-    >
-      {imgSrc ? (
-        <img
-          src={imgSrc.src}
-          srcSet={imgSrc.srcSet}
-          sizes="(min-width: 768px) 30vw, 75vw"
-          alt={cat.label}
-          loading={index < 2 ? 'eager' : 'lazy'}
-          decoding="async"
-          className="absolute inset-0 w-full h-full object-cover
-                     transition-transform duration-700 ease-out
-                     group-hover:scale-105 will-change-transform"
-          onError={(e) => {
-            if (imgSrc.fallbackSrc && e.currentTarget.src !== imgSrc.fallbackSrc) {
-              e.currentTarget.src = imgSrc.fallbackSrc
-              e.currentTarget.srcset = ''
-            }
-          }}
-        />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-br from-dark-300 to-dark-200 animate-pulse" />
-      )}
+    // wrapper div recebe o ref do reveal — Link não precisa mais de data-reveal
+    <div ref={wrapperRef} className={`aspect-[3/4] ${desktopClass}`}>
+      <Link
+        to={`/galeria/${cat.id}`}
+        className="group relative overflow-hidden rounded-2xl bg-dark-200
+                   block w-full h-full"
+      >
+        {imgSrc ? (
+          <img
+            src={imgSrc.src}
+            srcSet={imgSrc.srcSet}
+            sizes="(min-width: 768px) 30vw, 75vw"
+            alt={cat.label}
+            loading={index < 2 ? 'eager' : 'lazy'}
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover
+                       transition-transform duration-700 ease-out
+                       group-hover:scale-105 will-change-transform"
+            onError={(e) => {
+              if (imgSrc.fallbackSrc && e.currentTarget.src !== imgSrc.fallbackSrc) {
+                e.currentTarget.src = imgSrc.fallbackSrc
+                e.currentTarget.srcset = ''
+              }
+            }}
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-dark-300 to-dark-200 animate-pulse" />
+        )}
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5
-                      translate-y-0 group-hover:-translate-y-1 transition-transform duration-300">
-        <span className="inline-block font-body text-[9px] tracking-[0.25em] uppercase
-                         text-gold/90 border border-gold/30 rounded-full
-                         px-2.5 py-1 mb-2 bg-black/30 backdrop-blur-sm">
-          {cat.tag}
-        </span>
-        <h3 className="font-display text-lg md:text-xl italic text-white leading-tight">
-          {cat.label}
-        </h3>
-      </div>
+        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5
+                        translate-y-0 group-hover:-translate-y-1 transition-transform duration-300">
+          <span className="inline-block font-body text-[9px] tracking-[0.25em] uppercase
+                           text-gold/90 border border-gold/30 rounded-full
+                           px-2.5 py-1 mb-2 bg-black/30 backdrop-blur-sm">
+            {cat.tag}
+          </span>
+          <h3 className="font-display text-lg md:text-xl italic text-white leading-tight">
+            {cat.label}
+          </h3>
+        </div>
 
-      <div className="absolute top-3.5 right-3.5
-                      w-8 h-8 rounded-full
-                      border border-white/20 bg-black/20 backdrop-blur-sm
-                      flex items-center justify-center
-                      opacity-0 group-hover:opacity-100
-                      translate-y-1 group-hover:translate-y-0
-                      transition-all duration-300">
-        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-          <path d="M2 10L10 2M10 2H4M10 2v6"
-            stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </div>
-    </Link>
+        <div className="absolute top-3.5 right-3.5
+                        w-8 h-8 rounded-full
+                        border border-white/20 bg-black/20 backdrop-blur-sm
+                        flex items-center justify-center
+                        opacity-0 group-hover:opacity-100
+                        translate-y-1 group-hover:translate-y-0
+                        transition-all duration-300">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+            <path d="M2 10L10 2M10 2H4M10 2v6"
+              stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+      </Link>
+    </div>
   )
 }, (prev, next) => prev.coverPhoto?.url === next.coverPhoto?.url && prev.cat.id === next.cat.id)
 
@@ -147,6 +184,8 @@ const DEPOIMENTOS = [
    HOME
 ═══════════════════════════════════════════════════ */
 export default function Home() {
+  // useReveal() APENAS para seções estáticas (hero, sobre, depoimentos, cta)
+  // que já estão no DOM no mount — NÃO para CategoryCards async
   useReveal()
   const { categories, photos } = useGallery()
   const carouselRef = useRef(null)
@@ -167,7 +206,7 @@ export default function Home() {
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
 
-  // ── Só mostra categorias que têm pelo menos 1 foto ──
+  // Só mostra categorias que têm pelo menos 1 foto
   const categoriesWithPhotos = useMemo(
     () => categories.filter((cat) => photos[cat.id]?.length > 0),
     [categories, photos]
@@ -179,7 +218,7 @@ export default function Home() {
     <main>
 
       {/* ─────────────────────────────────────────────────────
-          1 · HERO
+          1 · HERO  (data-reveal: estático, OK)
       ───────────────────────────────────────────────────── */}
       <section className="relative min-h-[100svh] flex flex-col justify-end pb-12 overflow-hidden
                           md:flex-row md:items-center md:justify-start md:pb-0">
@@ -294,6 +333,7 @@ export default function Home() {
 
       {/* ─────────────────────────────────────────────────────
           2 · TRABALHOS
+          CategoryCard tem reveal próprio — não usa data-reveal
       ───────────────────────────────────────────────────── */}
       <section id="trabalhos-home" className="py-14 md:py-24 bg-dark overflow-hidden">
         <div className="max-w-6xl mx-auto">
@@ -337,7 +377,6 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Só renderiza se tiver categorias com fotos */}
           {categoriesWithPhotos.length === 0 ? null : (
             <>
               {/* ── MOBILE: Carrossel ── */}
@@ -462,14 +501,11 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* ── DESKTOP: Grid editorial ── */}
+              {/* ── DESKTOP: Grid editorial ──
+                  CategoryCard agora tem reveal próprio, sem data-reveal no JSX */}
               <div className="hidden md:block px-8">
                 <div
-                  data-reveal
-                  style={{
-                    ...revealStyle(100),
-                    gridTemplateRows: 'repeat(3, 180px)',
-                  }}
+                  style={{ gridTemplateRows: 'repeat(3, 180px)' }}
                   className="grid grid-cols-3 gap-3"
                 >
                   {categoriesWithPhotos.slice(0, 7).map((cat, i) => (
@@ -491,7 +527,7 @@ export default function Home() {
 
 
       {/* ─────────────────────────────────────────────────────
-          3 · SOBRE
+          3 · SOBRE  (data-reveal: estático, OK)
       ───────────────────────────────────────────────────── */}
       <section className="py-14 md:py-24 bg-dark-100 overflow-hidden">
         <div className="max-w-6xl mx-auto px-5 md:px-8">
@@ -575,7 +611,7 @@ export default function Home() {
 
 
       {/* ─────────────────────────────────────────────────────
-          4 · DEPOIMENTOS
+          4 · DEPOIMENTOS  (data-reveal: estático, OK)
       ───────────────────────────────────────────────────── */}
       <section className="py-14 md:py-24 bg-dark overflow-hidden">
         <div className="max-w-6xl mx-auto px-5 md:px-8">
@@ -637,7 +673,7 @@ export default function Home() {
 
 
       {/* ─────────────────────────────────────────────────────
-          5 · CTA FINAL
+          5 · CTA FINAL  (data-reveal: estático, OK)
       ───────────────────────────────────────────────────── */}
       <section className="py-14 md:py-24 bg-dark-100 overflow-hidden">
         <div className="max-w-6xl mx-auto px-5 md:px-8">

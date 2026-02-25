@@ -8,12 +8,15 @@ const CHUNK = 9
 
 // RevealItem: animação via CSS + IntersectionObserver (sem Framer Motion)
 // Seguro em Safari iOS — cada observer é destruído após animar
+// revealed.current garante que a animação nunca se repete após o primeiro trigger
 const RevealItem = memo(({ children, delay = 0 }) => {
   const ref = useRef(null)
+  const revealed = useRef(false)
 
   useEffect(() => {
     const el = ref.current
-    if (!el) return
+    // ← Sai imediatamente se já foi revelado — impede reset de opacity
+    if (!el || revealed.current) return
 
     el.style.opacity = '0'
     el.style.transform = 'translateY(20px)'
@@ -24,6 +27,7 @@ const RevealItem = memo(({ children, delay = 0 }) => {
         if (entry.isIntersecting) {
           el.style.opacity = '1'
           el.style.transform = 'translateY(0)'
+          revealed.current = true   // ← Marca como revelado de forma permanente
           observer.unobserve(el)
         }
       },
