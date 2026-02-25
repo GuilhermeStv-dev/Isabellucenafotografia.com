@@ -39,6 +39,9 @@ function SiteLayout() {
       const { default: Lenis } = await import('lenis');
       if (!ativo) return;
 
+      const isSafariIOS = /iP(ad|hone|od)/.test(navigator.userAgent);
+      if (isSafariIOS) return;
+
       lenis = new Lenis({
         duration: 0.75,
         easing: easeInOutCubic,
