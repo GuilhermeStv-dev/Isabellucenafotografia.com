@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo, memo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
 import FotoIsabel from '../assets/foto-isabel.webp'
@@ -366,12 +367,10 @@ export default function Home() {
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-full
                            bg-gold text-dark font-body font-semibold text-sm
                            transition-all duration-300 hover:brightness-110
-                           active:scale-95 min-h-[44px]"
+                           active:scale-95 min-h-[44px] btn-arrow-hover"
               >
                 Agendar sessão
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
+                <ArrowRight size={14} className="arrow-icon" />
               </a>
               <button
                 onClick={() => scrollTo('trabalhos-home')}
@@ -455,13 +454,10 @@ export default function Home() {
               className="shrink-0 inline-flex items-center gap-2 px-4 md:px-5 py-2.5 rounded-full
                          border border-white/20 text-white/60 font-body text-xs md:text-sm
                          transition-all duration-300 hover:border-gold/50 hover:text-white
-                         min-h-[44px]"
+                         min-h-[44px] btn-arrow-hover"
             >
               Ver todos
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                <path d="M2 10L10 2M10 2H4M10 2v6"
-                  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <ArrowRight size={14} className="arrow-icon" />
             </Link>
           </div>
 
@@ -506,7 +502,7 @@ export default function Home() {
                   <Link
                     to="/trabalhos"
                     className="shrink-0 rounded-2xl border border-white/10 bg-dark-200
-                               flex flex-col items-center justify-center gap-4"
+                               flex flex-col items-center justify-center gap-4 btn-arrow-hover"
                     style={{
                       scrollSnapAlign: 'start',
                       width: 'min(55vw, 180px)',
@@ -515,10 +511,7 @@ export default function Home() {
                   >
                     <div className="w-11 h-11 rounded-full border border-gold/40
                                     flex items-center justify-center text-gold">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M3 8h10M9 4l4 4-4 4"
-                          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                      </svg>
+                      <ArrowRight size={16} className="arrow-icon" />
                     </div>
                     <p className="font-body text-xs text-white/40 text-center px-4 leading-snug">
                       Ver todos<br />os trabalhos
@@ -648,13 +641,10 @@ export default function Home() {
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-full
                              bg-gold text-dark font-body font-semibold text-sm
                              transition-all duration-300 hover:brightness-110
-                             active:scale-95 min-h-[44px]"
+                             active:scale-95 min-h-[44px] btn-arrow-hover"
                 >
                   Falar com Isabel
-                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                    <path d="M2 12L12 2M12 2H5M12 2v7"
-                      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
+                  <ArrowRight size={14} className="arrow-icon" />
                 </a>
               </div>
             </div>
@@ -768,13 +758,10 @@ export default function Home() {
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-full
                              bg-gold text-dark font-body font-semibold text-sm
                              transition-all duration-300 hover:brightness-110
-                             active:scale-95 min-h-[44px]"
+                             active:scale-95 min-h-[44px] btn-arrow-hover"
                 >
                   Agendar sessão
-                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                    <path d="M2 12L12 2M12 2H5M12 2v7"
-                      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
+                  <ArrowRight size={14} className="arrow-icon" />
                 </a>
                 <Link
                   to="/trabalhos"

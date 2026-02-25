@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Eye, Heart } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Eye, Heart } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
 import GalleryGrid from '../components/GalleryGrid'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
@@ -45,7 +45,10 @@ export default function GalleryPage() {
       <div className="min-h-screen bg-dark flex items-center justify-center">
         <div className="text-center">
           <p className="text-white/40 mb-4">Categoria não encontrada.</p>
-          <Link to="/trabalhos" className="btn-outline">← Voltar</Link>
+          <Link to="/trabalhos" className="btn-outline inline-flex items-center gap-2 btn-arrow-hover">
+            Voltar
+            <ArrowRight size={14} className="arrow-icon" />
+          </Link>
         </div>
       </div>
     )

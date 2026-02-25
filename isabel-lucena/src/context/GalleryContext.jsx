@@ -126,7 +126,7 @@ export function GalleryProvider({ children }) {
           .eq('ativo', true)
           .in('categoria_slug', slugs)
           .order('created_at', { ascending: false })
-          .limit(slugs.length) // poucas fotos, só para ter 1 capa por cat
+          .limit(100) // amplia busca para cobrir melhor categorias com volume desigual
 
         if (fallbackData) {
           const seen = new Set()

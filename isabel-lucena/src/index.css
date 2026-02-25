@@ -89,3 +89,16 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Animação do ícone de seta nos botões */
+.btn-arrow-hover svg,
+.btn-arrow-hover .arrow-icon {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (min-width: 768px) {
+  .btn-arrow-hover:hover svg,
+  .btn-arrow-hover:hover .arrow-icon {
+    transform: rotate(-45deg);
+  }
+}
