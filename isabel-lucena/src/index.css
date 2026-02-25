@@ -3,8 +3,20 @@
 @tailwind utilities;
 
 @layer base {
-  * {
+  *,
+  *::before,
+  *::after {
     box-sizing: border-box;
+    /* Remove o tap highlight azul do iOS/Android */
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    /* Scroll behavior nativo suave */
+    scroll-behavior: smooth;
+    /* Evita zoom acidental ao focar inputs no iOS */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
@@ -12,83 +24,68 @@
     color: #ffffff;
     font-family: 'DM Sans', sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Scroll inercial no iOS */
+    -webkit-overflow-scrolling: touch;
+    overflow-x: hidden;
   }
 
   ::selection {
     background-color: #C9A96E;
     color: #0F0F0F;
   }
+
+  /* Focus ring acessível e visível */
+  :focus-visible {
+    outline: 2px solid #C9A96E;
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* Scrollbar fina e discreta */
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+  ::-webkit-scrollbar-track { background: #0F0F0F; }
+  ::-webkit-scrollbar-thumb { background: #C9A96E40; border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: #C9A96E; }
 }
 
 @layer components {
-  /* ─── Botão base ─── */
-  .btn {
-    @apply inline-flex items-center gap-2 px-6 py-3 rounded-full font-body font-semibold text-sm
-           transition-all duration-300 ease-in-out relative overflow-hidden
-           select-none cursor-pointer;
+  /* ─── Scroll horizontal sem scrollbar ─── */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
-
-  /* Pressed effect */
-  .btn:active {
-    transform: scale(0.96);
-    box-shadow: none !important;
-  }
-
-  /* ─── Botão primário (borda dourada / ghost) ─── */
-  .btn-primary {
-    @apply btn border border-gold text-white;
-    background: transparent;
-  }
-  .btn-primary:hover {
-    @apply bg-gold text-dark;
-    box-shadow: 0 4px 24px rgba(201,169,110,0.35);
-  }
-  .btn-primary .btn-arrow {
-    /* arrow should follow button text color (white by default) */
-    @apply text-white;
-  }
-  .btn-primary:hover .btn-arrow {
-    transform: rotate(-45deg);
-    @apply text-dark;
-  }
-
-  /* ─── Botão sólido dourado ─── */
-  .btn-gold {
-    @apply btn bg-gold text-dark font-semibold;
-  }
-  .btn-gold:hover {
-    @apply bg-gold-light;
-    box-shadow: 0 4px 24px rgba(201,169,110,0.45);
-  }
-  .btn-gold:hover .btn-arrow {
-    transform: rotate(-45deg);
-  }
-
-  .btn-arrow {
-    @apply transition-transform duration-300 text-dark;
-  }
-
-  /* ─── Scrollbar ─── */
-  ::-webkit-scrollbar {
-    width: 4px;
-  }
-  ::-webkit-scrollbar-track {
-    background: #0F0F0F;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: #C9A96E;
-    border-radius: 2px;
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }
 
-/* ─── Animações de entrada via IntersectionObserver ─── */
-.reveal {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: opacity 0.7s cubic-bezier(0.25,0.46,0.45,0.94),
-              transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94);
+/* ─── Keyframes globais ─── */
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-.reveal.visible {
-  opacity: 1;
-  transform: translateY(0);
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.8; }
+}
+
+/* ─── Redutor de motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

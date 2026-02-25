@@ -1,533 +1,658 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useGallery } from '../context/GalleryContext';
-import { getResponsiveImageSources } from '../lib/imageOptimization';
-import FotoIsabel from '../assets/foto-isabel.webp';
-import FotoIsabel2 from '../assets/Foto-isabel-2.webp';
-import FotoIsabel3 from '../assets/Foto-isabel3.webp';
-import FotoIsabel4 from '../assets/Foto-Isabel4.webp';
-import FotoGravida1 from '../assets/foto-gravida1.webp';
+import { useEffect, useRef, useState, useMemo, memo } from 'react'
+import { Link } from 'react-router-dom'
+import { useGallery } from '../context/GalleryContext'
+import { getResponsiveImageSources } from '../lib/imageOptimization'
+import FotoIsabel from '../assets/foto-isabel.webp'
+import FotoIsabel2 from '../assets/Foto-isabel-2.webp'
+import FotoIsabel3 from '../assets/Foto-isabel3.webp'
+import FotoIsabel4 from '../assets/Foto-Isabel4.webp'
 
-/* ─────────────────────────────────────────────
-   HOOK — Revela elementos ao entrar no viewport
-───────────────────────────────────────────── */
-function useReveal() {
+/* ═══════════════════════════════════════════════════
+   HOOKS
+═══════════════════════════════════════════════════ */
+
+// Scroll reveal via IntersectionObserver
+function useReveal(ref) {
   useEffect(() => {
+    const elements = ref?.current
+      ? ref.current.querySelectorAll('[data-reveal]')
+      : document.querySelectorAll('[data-reveal]')
+
     const observer = new IntersectionObserver(
-      (entries) => entries.forEach((e) => e.isIntersecting && e.target.classList.add('visible')),
-      { threshold: 0.12 }
-    );
-    document.querySelectorAll('.reveal').forEach((el) => observer.observe(el));
-    return () => observer.disconnect();
-  }, []);
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.style.opacity = '1'
+            entry.target.style.transform = 'translateY(0)'
+            observer.unobserve(entry.target)
+          }
+        })
+      },
+      { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+    )
+    elements.forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [ref])
 }
 
-/* ─────────────────────────────────────────────
-   DADOS — Altere aqui os textos / imagens
-───────────────────────────────────────────── */
+const revealStyle = (delay = 0) => ({
+  opacity: 0,
+  transform: 'translateY(28px)',
+  transition: `opacity 0.7s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms,
+               transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms`,
+})
 
-const PREVIEW_SPANS = ['row-span-2', '', '', 'row-span-2', '', '', ''];
-
-const SERVICES = [
-  {
-    id: 1,
-    title: 'Wedding',
-    desc: 'Cada detalhe do seu dia especial capturado com cuidado e emoção. Do getting ready à festa, nenhum momento é perdido.',
-    bullets: ['Cobertura completa do dia', 'Álbum digital em alta resolução', 'Entrega em até 60 dias', 'Prévia em 7 dias'],
-    img: '',
-  },
-  {
-    id: 2,
-    title: 'Ensaios Femininos',
-    desc: 'Estúdio ou externo, cada mulher tem uma história única a contar. Sessões pensadas para realçar sua beleza autêntica.',
-    bullets: ['Estúdio ou locação externa', 'Figurino e maquiagem à combinar', 'Entrega em até 30 dias', 'Mini sessão disponível'],
-    img: '',
-  },
-  {
-    id: 3,
-    title: 'Infantil & Maternidade',
-    desc: 'Crianças crescem rápido. Preserve cada gargalhada, cada olhar de descoberta e cada abraço quentinho.',
-    bullets: ['Estúdio equipado para bebês', 'Newborn disponível', 'Pacotes família', 'Entrega em até 30 dias'],
-    img: '',
-  },
-];
-
-const FEATURED = [
-  { id: 1, src: '', title: 'Grávidas', category: 'Maternidade', href: '/trabalhos?cat=gravidas' },
-  { id: 2, src: '', title: 'Ensaio Estúdio', category: 'Feminino', href: '/trabalhos?cat=estudio' },
-  { id: 3, src: '', title: 'Casamento', category: 'Wedding', href: '/trabalhos?cat=casamento' },
-];
-
-const TESTIMONIALS = [
-  {
-    id: 1,
-    name: 'Ana Carolina',
-    role: 'Ensaio de Grávida',
-    text: 'Isabel capturou exatamente o que eu queria: leveza, emoção e beleza. As fotos ficaram perfeitas e eu chorei quando vi o resultado!',
-    stars: 5,
-  },
-  {
-    id: 2,
-    name: 'Fernanda & Lucas',
-    role: 'Casamento',
-    text: 'Desde o primeiro contato soubemos que era a fotógrafa certa. Atenção a cada detalhe, sensibilidade e profissionalismo impecável.',
-    stars: 5,
-  },
-  {
-    id: 3,
-    name: 'Mariana Silva',
-    role: 'Ensaio Feminino',
-    text: 'Nunca me senti tão à vontade em um ensaio. Isabel tem um dom de deixar a gente natural e o resultado prova isso. Amei cada foto!',
-    stars: 5,
-  },
-];
-
-const BLOG_POSTS = [
-  { id: 1, src: '', category: 'Dicas', title: 'Como se preparar para o seu ensaio fotográfico', date: 'Jan 2025', href: '/blog/preparar-ensaio' },
-  { id: 2, src: '', category: 'Corporativo', title: 'Importância da fotografia corporativa para empresas', date: 'Fev 2025', href: '/blog/fotografia-corporativa' },
-  { id: 3, src: '', category: 'Casamento', title: 'Como criar um álbum de casamento único', date: 'Mar 2025', href: '/blog/album-casamento' },
-];
-
-/* ─────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════
    SUB-COMPONENTES
-───────────────────────────────────────────── */
+═══════════════════════════════════════════════════ */
 
-// Placeholder visual enquanto não há imagem
-const ImgPlaceholder = ({ className = '', icon = '📷' }) => (
-  <div className={`bg-dark-200 flex items-center justify-center text-3xl select-none ${className}`}>
-    <span className="opacity-20">{icon}</span>
-  </div>
-);
+// Card de categoria — memoizado para não re-renderizar sem necessidade
+const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
+  const imgSrc = useMemo(() => {
+    if (!coverPhoto?.url) return null
+    return getResponsiveImageSources(coverPhoto.url, {
+      widths: [480, 768],
+      qualities: [72, 75],
+      fallbackWidth: 768,
+      fallbackQuality: 75,
+    })
+  }, [coverPhoto?.url])
 
-// Estrelas de avaliação
-const Stars = ({ count }) => (
-  <div className="flex gap-0.5 mb-3">
-    {Array.from({ length: count }).map((_, i) => (
-      <svg key={i} width="14" height="14" viewBox="0 0 24 24" fill="#C9A96E">
-        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-      </svg>
-    ))}
-  </div>
-);
-
-/* ─────────────────────────────────────────────
-   PÁGINA HOME
-───────────────────────────────────────────── */
-export default function Home() {
-  useReveal();
-  const [activeService, setActiveService] = useState(0);
-  const { categories, photos } = useGallery();
-
-  useEffect(() => {
-    return undefined;
-  }, []);
-
-  const scrollTo = (id) => {
-    const target = document.getElementById(id);
-    if (!target) return;
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      target.scrollIntoView({ behavior: 'auto' });
-      return;
-    }
-
-    const lenis = window.__lenis;
-    if (lenis?.scrollTo) {
-      lenis.scrollTo(target, {
-        duration: 1.6,
-        easing: (t) => (t < 0.5
-          ? 4 * t * t * t
-          : 1 - Math.pow(-2 * t + 2, 3) / 2),
-      });
-      return;
-    }
-
-    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  // Proporções alternadas para layout desktop editorial
+  const desktopClass = {
+    tall: 'md:row-span-2',
+    wide: 'md:col-span-2',
+    normal: '',
+  }[layout] || ''
 
   return (
-    <main className="overflow-x-hidden">
+    <Link
+      to={`/galeria/${cat.id}`}
+      data-reveal
+      className={`group relative overflow-hidden rounded-2xl bg-dark-200
+                  aspect-[3/4] ${desktopClass}`}
+      style={revealStyle(index * 80)}
+    >
+      {/* Foto de fundo */}
+      {imgSrc ? (
+        <img
+          src={imgSrc.src}
+          srcSet={imgSrc.srcSet}
+          sizes="(min-width: 768px) 30vw, 75vw"
+          alt={cat.label}
+          loading={index < 2 ? 'eager' : 'lazy'}
+          decoding="async"
+          className="absolute inset-0 w-full h-full object-cover
+                     transition-transform duration-700 ease-out
+                     group-hover:scale-105 will-change-transform"
+          onError={(e) => {
+            if (imgSrc.fallbackSrc && e.currentTarget.src !== imgSrc.fallbackSrc) {
+              e.currentTarget.src = imgSrc.fallbackSrc
+              e.currentTarget.srcset = ''
+            }
+          }}
+        />
+      ) : (
+        // Skeleton shimmer enquanto carrega
+        <div className="absolute inset-0 bg-gradient-to-br from-dark-300 to-dark-200 animate-pulse" />
+      )}
 
-      {/* ══════════════════════════════════════════════════
-          1 · HERO
-      ══════════════════════════════════════════════════ */}
-      <section
-        id="hero"
-        className="snap-section relative min-h-screen flex items-center overflow-hidden"
-        style={{ background: 'linear-gradient(135deg,#0f0f0f 0%,#1a1509 60%,#0f0f0f 100%)' }}
-      >
-        {/* Overlay gradiente sobre imagem */}
-        <div className="absolute inset-0 bg-gradient-to-r from-dark via-dark/70 to-dark/10 z-10" />
+      {/* Gradiente base sempre visível */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
 
-        {/* Foto de fundo hero */}
+      {/* Hover overlay sutil */}
+      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+
+      {/* Conteúdo do card */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5
+                      translate-y-0 group-hover:-translate-y-1 transition-transform duration-300">
+        {/* Tag */}
+        <span className="inline-block font-body text-[9px] tracking-[0.25em] uppercase
+                         text-gold/90 border border-gold/30 rounded-full
+                         px-2.5 py-1 mb-2 bg-black/30 backdrop-blur-sm">
+          {cat.tag}
+        </span>
+        {/* Nome */}
+        <h3 className="font-display text-lg md:text-xl italic text-white leading-tight">
+          {cat.label}
+        </h3>
+      </div>
+
+      {/* Ícone de seta no topo */}
+      <div className="absolute top-3.5 right-3.5
+                      w-8 h-8 rounded-full
+                      border border-white/20 bg-black/20 backdrop-blur-sm
+                      flex items-center justify-center
+                      opacity-0 group-hover:opacity-100
+                      translate-y-1 group-hover:translate-y-0
+                      transition-all duration-300">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+          <path d="M2 10L10 2M10 2H4M10 2v6"
+            stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+    </Link>
+  )
+}, (prev, next) => prev.coverPhoto?.url === next.coverPhoto?.url && prev.cat.id === next.cat.id)
+
+CategoryCard.displayName = 'CategoryCard'
+
+/* ═══════════════════════════════════════════════════
+   DEPOIMENTOS
+═══════════════════════════════════════════════════ */
+const DEPOIMENTOS = [
+  {
+    id: 1, nome: 'Ana Carolina', sessao: 'Ensaio de Grávida', estrelas: 5,
+    texto: 'Isabel capturou exatamente o que eu queria: leveza, emoção e beleza. As fotos ficaram perfeitas, chorei quando vi o resultado!',
+  },
+  {
+    id: 2, nome: 'Fernanda & Lucas', sessao: 'Casamento', estrelas: 5,
+    texto: 'Desde o primeiro contato soubemos que era a fotógrafa certa. Atenção a cada detalhe, sensibilidade e profissionalismo impecável.',
+  },
+  {
+    id: 3, nome: 'Mariana Silva', sessao: 'Ensaio Feminino', estrelas: 5,
+    texto: 'Nunca me senti tão à vontade em um ensaio. Isabel tem o dom de deixar a gente natural e o resultado prova isso.',
+  },
+]
+
+/* ═══════════════════════════════════════════════════
+   HOME
+═══════════════════════════════════════════════════ */
+export default function Home() {
+  useReveal()
+  const { categories, photos } = useGallery()
+  const carouselRef = useRef(null)
+  const [activeCard, setActiveCard] = useState(0)
+
+  // Scroll suave para âncoras
+  const scrollTo = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  // Atualiza dot ativo conforme scroll do carrossel
+  useEffect(() => {
+    const el = carouselRef.current
+    if (!el) return
+    const onScroll = () => {
+      const cardWidth = el.firstChild?.offsetWidth || 0
+      setActiveCard(Math.round(el.scrollLeft / (cardWidth + 12)))
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  // Layout editorial desktop: alterna tall/normal para primeira linha
+  const desktopLayouts = ['tall', 'normal', 'normal', 'tall', 'normal', 'normal', 'normal']
+
+  /* ─────────────────────────────────────────────────────
+     1 · HERO
+  ───────────────────────────────────────────────────── */
+  return (
+    <main>
+
+      <section className="relative min-h-[100svh] flex flex-col justify-end pb-12 overflow-hidden
+                          md:flex-row md:items-center md:justify-start md:pb-0">
+        {/* Foto de fundo — ocupa tela inteira no mobile */}
         <div className="absolute inset-0">
-          <img src={FotoIsabel} className="w-full h-full object-cover" alt="Isabel Lucena" loading="eager" fetchPriority="high" decoding="async" />
+          <img
+            src={FotoIsabel}
+            alt="Isabel Lucena Fotografia"
+            className="w-full h-full object-cover object-top md:object-right"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+          />
+          {/* Gradiente mobile: escurece de baixo */}
+          <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/60 to-dark/20 md:hidden" />
+          {/* Gradiente desktop: escurece da esquerda */}
+          <div className="hidden md:block absolute inset-0
+                          bg-gradient-to-r from-dark via-dark/80 to-transparent" />
         </div>
 
         {/* Conteúdo */}
-        <div className="relative z-20 max-w-6xl mx-auto px-6 pt-24 w-full grid md:grid-cols-2 gap-16 items-center">
-          <div>
+        <div className="relative z-10 w-full max-w-6xl mx-auto px-5 md:px-8 pt-24 md:pt-0">
+          <div className="md:max-w-lg">
+
             <p
-              className="font-body text-gold text-xs tracking-[0.35em] uppercase mb-5"
-              style={{ animation: 'fadeInUp 0.6s 0.1s both' }}
+              data-reveal
+              style={revealStyle(50)}
+              className="font-body text-gold text-[10px] tracking-[0.4em] uppercase mb-4"
             >
               Isabel Lucena · Fotografia
             </p>
+
             <h1
-              className="font-display font-light text-white leading-[1.05] mb-6"
-              style={{ fontSize: 'clamp(2.8rem,7vw,5rem)', animation: 'fadeInUp 0.6s 0.3s both' }}
+              data-reveal
+              style={{
+                ...revealStyle(150),
+                fontSize: 'clamp(2.6rem, 9vw, 5.5rem)',
+                lineHeight: 1.05,
+              }}
+              className="font-display font-light text-white mb-5"
             >
               Capturando
               <br />
-              <em className="text-gold not-italic font-semibold">Histórias</em>
+              <em className="not-italic font-semibold text-gold">Histórias</em>
               <br />
               Autênticas
             </h1>
+
             <p
-              className="font-body text-white/55 text-base leading-relaxed max-w-md mb-10"
-              style={{ animation: 'fadeInUp 0.6s 0.5s both' }}
+              data-reveal
+              style={revealStyle(250)}
+              className="font-body text-white/55 text-sm md:text-base leading-relaxed mb-8 max-w-sm"
             >
-              Fotografia é conhecer o artístico e a atenção aos detalhes que fazem a diferença.
+              Cada imagem é uma promessa de que aquele momento não será esquecido.
             </p>
-            <div style={{ animation: 'fadeInUp 0.6s 0.7s both' }}>
+
+            {/* CTAs */}
+            <div data-reveal style={revealStyle(350)} className="flex flex-wrap gap-3">
               <a
                 href="https://wa.me/5587988449536"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-gold"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full
+                           bg-gold text-dark font-body font-semibold text-sm
+                           transition-all duration-300 hover:brightness-110
+                           active:scale-95 min-h-[44px]"
               >
-                Agende sua sessão agora mesmo
-                <span className="btn-arrow">→</span>
+                Agendar sessão
+                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                  <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
               </a>
+              <button
+                onClick={() => scrollTo('trabalhos-home')}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full
+                           border border-white/25 text-white/80 font-body text-sm
+                           transition-all duration-300 hover:border-white/60 hover:text-white
+                           active:scale-95 min-h-[44px]"
+              >
+                Ver trabalhos
+              </button>
             </div>
-          </div>
 
-          {/* Destaque foto lateral — opcional */}
-          <div
-            className="hidden md:block"
-            style={{ animation: 'fadeIn 1s 0.6s both' }}
-          >
-            <div className="relative w-[360px] ml-auto">
-              <div className="w-full aspect-[3/4] rounded-2xl overflow-hidden border border-gold/15 shadow-[0_20px_80px_rgba(0,0,0,0.6)]">
-                <img src={FotoIsabel2} className="w-full h-full object-cover" alt="Isabel Lucena" loading="lazy" decoding="async" />
-              </div>
-              {/* Badge flutuante */}
-              <div className="absolute -bottom-5 -left-8 bg-gold text-dark px-5 py-3 rounded-xl shadow-xl">
-                <p className="font-display font-semibold text-lg leading-none">+500</p>
-                <p className="font-body text-xs tracking-wide mt-0.5">Histórias capturadas</p>
-              </div>
+          </div>
+        </div>
+
+        {/* Badge estatística */}
+        <div
+          data-reveal
+          style={revealStyle(500)}
+          className="relative z-10 mx-5 mt-8 md:hidden"
+        >
+          <div className="inline-flex items-center gap-3
+                          bg-white/8 backdrop-blur-md border border-white/10
+                          rounded-2xl px-4 py-3">
+            <div>
+              <p className="font-display font-semibold text-2xl text-gold leading-none">+500</p>
+              <p className="font-body text-[11px] text-white/50 mt-0.5">histórias capturadas</p>
+            </div>
+            <div className="w-px h-10 bg-white/10" />
+            <div>
+              <p className="font-display font-semibold text-2xl text-gold leading-none">7</p>
+              <p className="font-body text-[11px] text-white/50 mt-0.5">anos de experiência</p>
             </div>
           </div>
         </div>
 
-        {/* Seta bounce — scroll pra seção de trabalhos */}
+        {/* Scroll indicator */}
         <button
-          onClick={() => scrollTo('meus-trabalhos')}
-          aria-label="Ver meus trabalhos"
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20
-                     text-gold/60 hover:text-gold transition-colors duration-300
-                     animate-bounce_arrow"
+          onClick={() => scrollTo('trabalhos-home')}
+          aria-label="Scroll para baixo"
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10
+                     text-white/30 hover:text-gold transition-colors
+                     hidden md:flex flex-col items-center gap-1.5"
         >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-            <path d="M12 4v16M12 20l-5-5M12 20l5-5"
-              stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <span className="font-body text-[10px] tracking-widest uppercase">Scroll</span>
+          <div className="w-px h-8 bg-gradient-to-b from-white/30 to-transparent animate-pulse" />
         </button>
       </section>
 
-      {/* ══════════════════════════════════════════════════
-          2 · MEUS TRABALHOS
-      ══════════════════════════════════════════════════ */}
-      <section id="meus-trabalhos" className="snap-section py-28 bg-dark-100">
-        <div className="max-w-6xl mx-auto px-6">
+
+      {/* ─────────────────────────────────────────────────────
+          2 · TRABALHOS
+      ───────────────────────────────────────────────────── */}
+      <section id="trabalhos-home" className="py-14 md:py-24 bg-dark overflow-hidden">
+        <div className="max-w-6xl mx-auto">
 
           {/* Header da seção */}
-          <div className="reveal flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-14">
+          <div className="px-5 md:px-8 flex items-end justify-between gap-4 mb-8 md:mb-10">
             <div>
-              <p className="font-body text-gold text-xs tracking-[0.3em] uppercase mb-3">Portfólio</p>
-              <h2 className="font-display font-light text-white" style={{ fontSize: 'clamp(2rem,5vw,3.5rem)' }}>
-                Meus <em className="text-gold not-italic font-semibold">trabalhos</em>
+              <p
+                data-reveal
+                style={revealStyle(0)}
+                className="font-body text-gold text-[10px] tracking-[0.3em] uppercase mb-2"
+              >
+                Portfólio
+              </p>
+              <h2
+                data-reveal
+                style={{
+                  ...revealStyle(80),
+                  fontSize: 'clamp(1.8rem, 5vw, 3rem)',
+                }}
+                className="font-display font-light text-white"
+              >
+                Meus{' '}
+                <em className="not-italic font-semibold text-gold">trabalhos</em>
               </h2>
             </div>
-            <Link to="/trabalhos" className="btn-primary shrink-0">
-              Ver tudo <span className="btn-arrow">→</span>
+
+            <Link
+              data-reveal
+              style={revealStyle(120)}
+              to="/trabalhos"
+              className="shrink-0 inline-flex items-center gap-2 px-4 md:px-5 py-2.5 rounded-full
+                         border border-white/20 text-white/60 font-body text-xs md:text-sm
+                         transition-all duration-300 hover:border-gold/50 hover:text-white
+                         min-h-[44px]"
+            >
+              Ver todos
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                <path d="M2 10L10 2M10 2H4M10 2v6"
+                  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
             </Link>
           </div>
 
-          {/* Grid masonry-like */}
-          <div className="reveal grid grid-cols-3 gap-3" style={{ gridAutoRows: '180px' }}>
-            {categories.slice(0, 7).map((category, index) => {
-              const coverPhoto = photos[category.id]?.[0];
-              const coverImage = coverPhoto
-                ? getResponsiveImageSources(coverPhoto.url, {
-                  widths: [480, 768, 1200],
-                  qualities: [68, 70, 75],
-                  fallbackWidth: 1200,
-                  fallbackQuality: 75,
-                })
-                : { src: '', srcSet: undefined, fallbackSrc: '' };
+          {/* ── MOBILE: Carrossel horizontal com snap ── */}
+          <div className="md:hidden relative">
 
-              return (
-                <Link
-                  to={`/galeria/${category.id}`}
-                  key={category.id}
-                  className={`rounded-xl overflow-hidden group relative cursor-pointer ${PREVIEW_SPANS[index] || ''}`}
-                >
-                  {coverPhoto
-                    ? (
+            {/* Fade na borda direita (indica scroll) */}
+            <div className="pointer-events-none absolute right-0 top-0 bottom-4 w-14 z-10
+                            bg-gradient-to-l from-dark to-transparent" />
+
+            {/* Trilho de scroll */}
+            <div
+              ref={carouselRef}
+              className="flex gap-3 px-5 pb-3 overflow-x-auto"
+              style={{
+                scrollSnapType: 'x mandatory',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+              }}
+            >
+              {categories.slice(0, 7).map((cat, i) => {
+                const coverPhoto = photos[cat.id]?.[0]
+                const imgSrc = coverPhoto?.url
+                  ? getResponsiveImageSources(coverPhoto.url, {
+                    widths: [320, 480],
+                    qualities: [70, 75],
+                    fallbackWidth: 480,
+                    fallbackQuality: 75,
+                  })
+                  : null
+
+                return (
+                  <Link
+                    key={cat.id}
+                    to={`/galeria/${cat.id}`}
+                    className="group relative shrink-0 rounded-2xl overflow-hidden bg-dark-200"
+                    style={{
+                      scrollSnapAlign: 'start',
+                      scrollSnapStop: 'always',
+                      width: 'min(75vw, 260px)',
+                      aspectRatio: '3/4',
+                    }}
+                  >
+                    {imgSrc ? (
                       <img
-                        src={coverImage.src}
-                        srcSet={coverImage.srcSet}
-                        sizes="(min-width: 1024px) 30vw, 33vw"
-                        alt={category.label}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        loading="lazy"
+                        src={imgSrc.src}
+                        srcSet={imgSrc.srcSet}
+                        sizes="75vw"
+                        alt={cat.label}
+                        loading={i < 2 ? 'eager' : 'lazy'}
                         decoding="async"
-                        onError={(event) => {
-                          if (coverImage.fallbackSrc && event.currentTarget.src !== coverImage.fallbackSrc) {
-                            event.currentTarget.src = coverImage.fallbackSrc;
-                            event.currentTarget.srcset = '';
+                        className="absolute inset-0 w-full h-full object-cover
+                                   transition-transform duration-500 group-active:scale-105"
+                        onError={(e) => {
+                          if (imgSrc.fallbackSrc && e.currentTarget.src !== imgSrc.fallbackSrc) {
+                            e.currentTarget.src = imgSrc.fallbackSrc
+                            e.currentTarget.srcset = ''
                           }
                         }}
                       />
-                    )
-                    : <ImgPlaceholder className="w-full h-full transition-transform duration-700 group-hover:scale-105" />
-                  }
-                  {/* Overlay com categoria no hover */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-dark/80 via-transparent to-transparent
-                                opacity-0 group-hover:opacity-100 transition-opacity duration-400 flex items-end p-4">
-                    <span className="font-body text-xs text-gold tracking-widest uppercase">{category.tag}</span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+                    ) : (
+                      <div className="absolute inset-0 bg-dark-300 animate-pulse" />
+                    )}
 
-      {/* ══════════════════════════════════════════════════
-          3 · OLÁ, SOU ISABEL LUCENA
-      ══════════════════════════════════════════════════ */}
-      <section id="sobre" className="snap-section py-28 bg-dark">
-        <div className="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
 
-          {/* Fotos — composição com 2 imagens sobrepostas */}
-          <div className="reveal relative h-[520px]">
-            {/* Foto principal */}
-            <div className="absolute left-0 top-0 w-[72%] aspect-square rounded-2xl overflow-hidden border border-gold/10 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-              <img src={FotoIsabel3} alt="Isabel Lucena" className="w-full h-full object-cover object-top" loading="lazy" decoding="async" />
-            </div>
-            {/* Foto secundária — sobreposta */}
-            <div className="absolute right-0 bottom-0 w-[55%] aspect-[4/5] rounded-2xl overflow-hidden border border-gold/20 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-              <img src={FotoIsabel4} alt="Isabel Lucena" className="w-full h-full object-cover" loading="lazy" decoding="async" />
-            </div>
-            {/* Detalhe decorativo */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-full border border-gold/30 pointer-events-none" />
-          </div>
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                      <span className="inline-block font-body text-[9px] tracking-[0.2em] uppercase
+                                       text-gold border border-gold/30 rounded-full px-2 py-0.5 mb-2
+                                       bg-black/30 backdrop-blur-sm">
+                        {cat.tag}
+                      </span>
+                      <h3 className="font-display text-lg italic text-white">{cat.label}</h3>
+                    </div>
 
-          {/* Texto */}
-          <div className="reveal">
-            <p className="font-body text-gold text-xs tracking-[0.3em] uppercase mb-4">Sobre mim</p>
-            <h2 className="font-display font-light text-white mb-2" style={{ fontSize: 'clamp(1.8rem,4vw,3rem)' }}>
-              Olá, sou
-            </h2>
-            <h2 className="font-display font-semibold text-gold mb-6" style={{ fontSize: 'clamp(1.8rem,4vw,3rem)' }}>
-              Isabel Lucena
-            </h2>
+                    {/* Número do card */}
+                    <div className="absolute top-3.5 left-3.5
+                                    font-body text-[10px] text-white/40 tracking-wider">
+                      {String(i + 1).padStart(2, '0')}
+                    </div>
+                  </Link>
+                )
+              })}
 
-            {/* Intro */}
-            <div className="mb-6 pb-6 border-b border-dark-300">
-              <p className="font-body text-xs text-gold tracking-widest uppercase mb-2">Introdução</p>
-              <p className="font-body text-white/65 text-sm leading-relaxed">
-                Apaixonada por fotografia há mais de 8 anos, acredito que cada imagem tem o poder de transformar
-                um momento em memória eterna. Sou de Paulo Afonso, Bahia, e atendo em todo o Nordeste.
-                Tudo que faço é com o coração — porque fotografia não é só técnica, é sentimento.
-              </p>
-            </div>
-
-            {/* Contato rápido */}
-            <div className="mb-8">
-              <p className="font-body text-xs text-gold tracking-widest uppercase mb-3">Informações de contato</p>
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-3">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0" />
-                  <span className="font-body text-sm text-white/65">isabeltravassos2015@gmail.com</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0" />
-                  <span className="font-body text-sm text-white/65">(87) 9 8844-9536 · Paulo Afonso, BA</span>
-                </div>
-              </div>
-            </div>
-
-            <a
-              href="https://wa.me/5587988449536"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-primary"
-            >
-              Agendar um ensaio <span className="btn-arrow">→</span>
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════
-          4 · MEUS SERVIÇOS
-      ══════════════════════════════════════════════════ */}
-      <section id="servicos" className="snap-section py-28 bg-dark-100">
-        <div className="max-w-6xl mx-auto px-6">
-
-          <div className="reveal mb-14 text-center">
-            <p className="font-body text-gold text-xs tracking-[0.3em] uppercase mb-4">O que ofereço</p>
-            <h2 className="font-display font-light text-white" style={{ fontSize: 'clamp(2rem,5vw,3.5rem)' }}>
-              Meus <em className="text-gold not-italic font-semibold">serviços</em>
-            </h2>
-          </div>
-
-          {/* Tabs de serviço */}
-          <div className="reveal flex flex-wrap justify-center gap-2 mb-10">
-            {SERVICES.map((s, i) => (
-              <button
-                key={s.id}
-                onClick={() => setActiveService(i)}
-                className={`font-body text-sm px-5 py-2.5 rounded-full border transition-all duration-300 active:scale-95
-                  ${activeService === i
-                    ? 'bg-gold text-dark border-gold font-semibold shadow-[0_4px_20px_rgba(201,169,110,0.4)]'
-                    : 'border-dark-300 text-white/60 hover:border-gold/50 hover:text-white'
-                  }`}
+              {/* Card final — "ver todos" */}
+              <Link
+                to="/trabalhos"
+                className="shrink-0 rounded-2xl border border-white/10 bg-dark-200
+                           flex flex-col items-center justify-center gap-4"
+                style={{
+                  scrollSnapAlign: 'start',
+                  width: 'min(55vw, 180px)',
+                  aspectRatio: '3/4',
+                }}
               >
-                {s.title}
-              </button>
-            ))}
+                <div className="w-11 h-11 rounded-full border border-gold/40
+                                flex items-center justify-center text-gold
+                                transition-all duration-300 group-hover:bg-gold group-hover:text-dark">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M3 8h10M9 4l4 4-4 4"
+                      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </div>
+                <p className="font-body text-xs text-white/40 text-center px-4 leading-snug">
+                  Ver todos<br />os trabalhos
+                </p>
+              </Link>
+            </div>
+
+            {/* Dots de navegação */}
+            <div className="flex justify-center gap-1.5 mt-4 px-5">
+              {categories.slice(0, 7).map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    const el = carouselRef.current
+                    if (!el) return
+                    const cardWidth = el.firstChild?.offsetWidth || 0
+                    el.scrollTo({ left: i * (cardWidth + 12), behavior: 'smooth' })
+                  }}
+                  className={`rounded-full transition-all duration-300 min-w-[8px] min-h-[8px]
+                    ${activeCard === i
+                      ? 'bg-gold w-5 h-2'
+                      : 'bg-white/20 w-2 h-2 hover:bg-white/40'
+                    }`}
+                  aria-label={`Ir para ${categories[i]?.label}`}
+                />
+              ))}
+            </div>
           </div>
 
-          {/* Card do serviço ativo */}
-          {SERVICES.map((s, i) => (
+          {/* ── DESKTOP: Grid editorial assimétrico ── */}
+          <div className="hidden md:block px-8">
             <div
-              key={s.id}
-              className={`reveal grid md:grid-cols-2 gap-10 items-center transition-all duration-500
-                ${activeService === i ? 'block' : 'hidden'}`}
+              data-reveal
+              style={revealStyle(100)}
+              className="grid grid-cols-3 gap-3"
+              style={{ gridTemplateRows: 'repeat(3, 180px)' }}
             >
-              {/* Imagem */}
-              <div className="aspect-[4/3] rounded-2xl overflow-hidden border border-gold/10">
-                {s.img
-                  ? <img src={s.img} alt={s.title} className="w-full h-full object-cover" loading="lazy" decoding="async" />
-                  : <ImgPlaceholder className="w-full h-full" />
-                }
-              </div>
+              {categories.slice(0, 7).map((cat, i) => (
+                <CategoryCard
+                  key={cat.id}
+                  cat={cat}
+                  coverPhoto={photos[cat.id]?.[0]}
+                  index={i}
+                  layout={desktopLayouts[i]}
+                />
+              ))}
+            </div>
+          </div>
 
-              {/* Texto */}
-              <div>
-                <h3 className="font-display text-3xl font-semibold text-gold mb-4">{s.title}</h3>
-                <p className="font-body text-white/65 text-sm leading-relaxed mb-6">{s.desc}</p>
-                <ul className="flex flex-col gap-3 mb-8">
-                  {s.bullets.map((b) => (
-                    <li key={b} className="flex items-center gap-3 font-body text-sm text-white/75">
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
-                        <circle cx="8" cy="8" r="7" stroke="#C9A96E" strokeWidth="1" />
-                        <path d="M5 8l2 2 4-4" stroke="#C9A96E" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      {b}
-                    </li>
-                  ))}
-                </ul>
+        </div>
+      </section>
+
+
+      {/* ─────────────────────────────────────────────────────
+          3 · SOBRE
+      ───────────────────────────────────────────────────── */}
+      <section className="py-14 md:py-24 bg-dark-100 overflow-hidden">
+        <div className="max-w-6xl mx-auto px-5 md:px-8">
+          <div className="flex flex-col md:flex-row md:items-center gap-10 md:gap-16">
+
+            {/* Foto — ocupa metade do grid no desktop, 60% no mobile */}
+            <div
+              data-reveal
+              style={revealStyle(0)}
+              className="relative w-[75%] max-w-[320px] mx-auto md:mx-0 md:w-[42%] shrink-0"
+            >
+              <div className="aspect-[3/4] rounded-3xl overflow-hidden border border-gold/10">
+                <img
+                  src={FotoIsabel2}
+                  alt="Isabel Lucena"
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              {/* Detalhe decorativo */}
+              <div className="absolute -bottom-4 -right-4 w-24 h-24
+                              rounded-2xl border border-gold/20 -z-10" />
+              <div className="absolute -top-4 -left-4 w-16 h-16
+                              rounded-xl bg-gold/5 border border-gold/15 -z-10" />
+
+              {/* Badge flutuante */}
+              <div className="absolute -bottom-2 left-6
+                              bg-dark border border-gold/25 rounded-2xl px-4 py-3 shadow-xl">
+                <p className="font-display font-semibold text-xl text-gold leading-none">7+</p>
+                <p className="font-body text-[10px] text-white/50 mt-0.5 tracking-wide">anos de experiência</p>
+              </div>
+            </div>
+
+            {/* Texto */}
+            <div className="flex-1">
+              <p data-reveal style={revealStyle(80)}
+                className="font-body text-gold text-[10px] tracking-[0.3em] uppercase mb-3">
+                Sobre mim
+              </p>
+              <h2
+                data-reveal
+                style={{
+                  ...revealStyle(120),
+                  fontSize: 'clamp(1.7rem, 4.5vw, 2.8rem)',
+                }}
+                className="font-display font-light text-white leading-tight mb-5"
+              >
+                Apaixonada por <br />
+                <em className="not-italic font-semibold text-gold">contar histórias</em>
+                <br />com a câmera
+              </h2>
+
+              <p data-reveal style={revealStyle(180)}
+                className="font-body text-white/55 text-sm md:text-base leading-relaxed mb-4">
+                Sou Isabel Lucena, fotógrafa baseada em Paulo Afonso, Bahia. Com mais de 7 anos de experiência,
+                especializo-me em transformar momentos únicos em memórias eternas.
+              </p>
+              <p data-reveal style={revealStyle(220)}
+                className="font-body text-white/40 text-sm leading-relaxed mb-8">
+                Cada sessão é planejada com atenção aos mínimos detalhes — da iluminação ao pós-processamento —
+                para entregar imagens que te fazem sentir a emoção novamente.
+              </p>
+
+              <div data-reveal style={revealStyle(280)}>
                 <a
                   href="https://wa.me/5587988449536"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="btn-gold"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full
+                             bg-gold text-dark font-body font-semibold text-sm
+                             transition-all duration-300 hover:brightness-110
+                             active:scale-95 min-h-[44px]"
                 >
-                  Guardar momentos <span className="btn-arrow">→</span>
+                  Falar com Isabel
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 12L12 2M12 2H5M12 2v7"
+                      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
                 </a>
               </div>
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════
-          5 · TRABALHOS EM DESTAQUE
-      ══════════════════════════════════════════════════ */}
-      <section id="destaques" className="snap-section py-28 bg-dark">
-        <div className="max-w-6xl mx-auto px-6">
-
-          <div className="reveal flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-14">
-            <div>
-              <p className="font-body text-gold text-xs tracking-[0.3em] uppercase mb-3">Destaques</p>
-              <h2 className="font-display font-light text-white" style={{ fontSize: 'clamp(2rem,5vw,3.5rem)' }}>
-                Trabalhos em <em className="text-gold not-italic font-semibold">destaque</em>
-              </h2>
-            </div>
-            <Link to="/trabalhos" className="btn-primary shrink-0">
-              Ver tudo <span className="btn-arrow">→</span>
-            </Link>
-          </div>
-
-          <div className="reveal grid sm:grid-cols-2 md:grid-cols-3 gap-5">
-            {FEATURED.map((item) => (
-              <Link
-                key={item.id}
-                to={item.href}
-                className="group relative rounded-2xl overflow-hidden border border-dark-300
-                           hover:border-gold/40 transition-all duration-400"
-              >
-                {/* Foto */}
-                <div className="aspect-[3/4] overflow-hidden">
-                  {item.src
-                    ? <img src={item.src} alt={item.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" loading="lazy" decoding="async" />
-                    : <ImgPlaceholder className="w-full h-full transition-transform duration-700 group-hover:scale-105" />
-                  }
-                </div>
-
-                {/* Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-dark/90 via-dark/20 to-transparent flex flex-col justify-end p-5">
-                  <span className="font-body text-gold text-[10px] tracking-[0.3em] uppercase mb-1">{item.category}</span>
-                  <h3 className="font-display text-xl text-white font-semibold">{item.title}</h3>
-                  <div className="flex items-center gap-2 mt-3 text-gold opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
-                    <span className="font-body text-xs tracking-wide">Ver fotos</span>
-                    <span className="text-sm transition-transform duration-300 group-hover:rotate-[-45deg]">→</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
           </div>
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════
-          6 · DEPOIMENTOS
-      ══════════════════════════════════════════════════ */}
-      <section id="depoimentos" className="snap-section py-28 bg-dark-100 overflow-hidden">
-        <div className="max-w-6xl mx-auto px-6">
 
-          <div className="reveal mb-14 text-center">
-            <p className="font-body text-gold text-xs tracking-[0.3em] uppercase mb-4">Clientes</p>
-            <h2 className="font-display font-light text-white" style={{ fontSize: 'clamp(2rem,5vw,3.5rem)' }}>
-              O que os meus <em className="text-gold not-italic font-semibold">clientes</em> dizem
+      {/* ─────────────────────────────────────────────────────
+          4 · DEPOIMENTOS
+      ───────────────────────────────────────────────────── */}
+      <section className="py-14 md:py-24 bg-dark overflow-hidden">
+        <div className="max-w-6xl mx-auto px-5 md:px-8">
+
+          <div className="text-center mb-10 md:mb-14">
+            <p data-reveal style={revealStyle(0)}
+              className="font-body text-gold text-[10px] tracking-[0.3em] uppercase mb-2">
+              Depoimentos
+            </p>
+            <h2
+              data-reveal
+              style={{
+                ...revealStyle(80),
+                fontSize: 'clamp(1.7rem, 4.5vw, 2.8rem)',
+              }}
+              className="font-display font-light text-white"
+            >
+              O que dizem{' '}
+              <em className="not-italic font-semibold text-gold">minhas clientes</em>
             </h2>
           </div>
 
-          <div className="reveal grid sm:grid-cols-2 md:grid-cols-3 gap-5">
-            {TESTIMONIALS.map((t) => (
+          {/* Grid de depoimentos — 1 col mobile, 3 cols desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
+            {DEPOIMENTOS.map((dep, i) => (
               <div
-                key={t.id}
-                className="bg-dark-200 rounded-2xl p-7 border border-dark-300
-                           hover:border-gold/25 hover:shadow-[0_8px_40px_rgba(201,169,110,0.08)]
-                           transition-all duration-400"
+                key={dep.id}
+                data-reveal
+                style={revealStyle(i * 100)}
+                className="bg-dark-100 border border-dark-300 rounded-2xl p-6 md:p-7
+                           flex flex-col gap-4"
               >
-                <Stars count={t.stars} />
-                <p className="font-body text-white/65 text-sm leading-relaxed mb-6 italic">
-                  "{t.text}"
+                {/* Estrelas */}
+                <div className="flex gap-0.5">
+                  {Array.from({ length: dep.estrelas }).map((_, j) => (
+                    <svg key={j} width="13" height="13" viewBox="0 0 24 24" fill="#C9A96E">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                    </svg>
+                  ))}
+                </div>
+                <p className="font-body text-white/65 text-sm leading-relaxed flex-1">
+                  "{dep.texto}"
                 </p>
-                <div className="flex items-center gap-3">
-                  {/* Avatar placeholder */}
-                  <div className="w-9 h-9 rounded-full bg-gold/20 border border-gold/30 flex items-center justify-center">
-                    <span className="font-display text-gold font-semibold text-sm">{t.name[0]}</span>
+                <div className="flex items-center gap-3 pt-1 border-t border-dark-300">
+                  <div className="w-9 h-9 rounded-full bg-gold/15 border border-gold/25
+                                  flex items-center justify-center shrink-0">
+                    <span className="font-display text-gold text-sm font-semibold">
+                      {dep.nome[0]}
+                    </span>
                   </div>
                   <div>
-                    <p className="font-body text-white text-sm font-medium">{t.name}</p>
-                    <p className="font-body text-gold/70 text-xs">{t.role}</p>
+                    <p className="font-body text-white text-sm font-medium">{dep.nome}</p>
+                    <p className="font-body text-white/35 text-xs">{dep.sessao}</p>
                   </div>
                 </div>
               </div>
@@ -536,98 +661,75 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ══════════════════════════════════════════════════
-          7 · MEU BLOG
-      ══════════════════════════════════════════════════ */}
-      <section id="blog" className="snap-section py-28 bg-dark">
-        <div className="max-w-6xl mx-auto px-6">
 
-          <div className="reveal flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-14">
-            <div>
-              <p className="font-body text-gold text-xs tracking-[0.3em] uppercase mb-3">Artigos</p>
-              <h2 className="font-display font-light text-white" style={{ fontSize: 'clamp(2rem,5vw,3.5rem)' }}>
-                Meu <em className="text-gold not-italic font-semibold">blog</em>
-              </h2>
+      {/* ─────────────────────────────────────────────────────
+          5 · CTA FINAL
+      ───────────────────────────────────────────────────── */}
+      <section className="py-14 md:py-24 bg-dark-100 overflow-hidden">
+        <div className="max-w-6xl mx-auto px-5 md:px-8">
+          <div className="relative rounded-3xl overflow-hidden bg-dark-200 border border-dark-300 p-8 md:p-14">
+
+            {/* Foto de fundo desfocada */}
+            <div className="absolute inset-0 opacity-15">
+              <img src={FotoIsabel3} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
             </div>
-            <Link to="/blog" className="btn-primary shrink-0">
-              Ver tudo <span className="btn-arrow">→</span>
-            </Link>
-          </div>
+            <div className="absolute inset-0 bg-gradient-to-br from-dark-200/90 via-dark-200/70 to-dark-200/95" />
 
-          <div className="reveal grid sm:grid-cols-2 md:grid-cols-3 gap-5">
-            {BLOG_POSTS.map((post) => (
-              <Link
-                key={post.id}
-                to={post.href}
-                className="group rounded-2xl overflow-hidden border border-dark-300
-                           hover:border-gold/30 transition-all duration-300
-                           flex flex-col h-full"
+            {/* Detalhe dourado */}
+            <div className="absolute top-0 left-0 w-40 h-40 rounded-br-full
+                            bg-gold/5 border-b border-r border-gold/15" />
+
+            <div className="relative z-10 text-center max-w-xl mx-auto">
+              <p data-reveal style={revealStyle(0)}
+                className="font-body text-gold text-[10px] tracking-[0.3em] uppercase mb-3">
+                Vamos criar juntos
+              </p>
+              <h2
+                data-reveal
+                style={{
+                  ...revealStyle(80),
+                  fontSize: 'clamp(1.7rem, 5vw, 3rem)',
+                }}
+                className="font-display font-light text-white mb-4"
               >
-                {/* Thumb */}
-                <div className="aspect-[16/9] overflow-hidden">
-                  {post.src
-                    ? <img src={post.src} alt={post.title} className="w-full h-full object-cover transition-transform duration-600 group-hover:scale-105" loading="lazy" decoding="async" />
-                    : <ImgPlaceholder className="w-full h-full transition-transform duration-600 group-hover:scale-105" />
-                  }
-                </div>
-
-                {/* Texto */}
-                <div className="p-5 bg-dark-200 flex flex-col flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="font-body text-[10px] text-gold tracking-widest uppercase">{post.category}</span>
-                    <span className="w-1 h-1 rounded-full bg-dark-300" />
-                    <span className="font-body text-[10px] text-white/35">{post.date}</span>
-                  </div>
-                  <h3 className="font-display text-lg text-white font-medium leading-snug
-                             group-hover:text-gold transition-colors duration-300
-                             min-h-[3.25rem]">
-                    {post.title}
-                  </h3>
-                  <div className="flex items-center gap-1.5 mt-auto pt-4 text-gold text-xs font-body">
-                    <span>Ler mais</span>
-                    <span className="transition-transform duration-300 group-hover:rotate-[-45deg]">→</span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════
-          8 · CTA FINAL
-      ══════════════════════════════════════════════════ */}
-      <section className="snap-section relative py-28 bg-dark-100 overflow-hidden">
-        <div className="absolute inset-0">
-          <img src={FotoGravida1} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
-          <div className="absolute inset-0 bg-gradient-to-r from-dark/90 via-dark/70 to-dark/60" />
-        </div>
-        <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
-          <div className="reveal">
-            <p className="font-body text-gold text-xs tracking-[0.3em] uppercase mb-2">Vamos criar juntas?</p>
-            <h2
-              className="font-display text-white mb-4 leading-tight"
-              style={{ fontSize: 'clamp(2rem,5vw,3.5rem)' }}
-            >
-              <span className="font-semibold">Pronta para guardar os seus</span><br />
-              <em className="text-gold not-italic font-semibold">momentos especiais?</em>
-            </h2>
-            <p className="font-body text-white/50 text-sm leading-relaxed mb-8 max-w-md mx-auto">
-              Entre em contato e vamos conversar sobre a sessão dos seus sonhos.
-              Atendo em Paulo Afonso e região.
-            </p>
-            <a
-              href="https://wa.me/5587988449536"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn-gold"
-            >
-              Falar no WhatsApp <span className="btn-arrow">→</span>
-            </a>
+                Pronta para preservar{' '}
+                <em className="not-italic font-semibold text-gold">seus momentos?</em>
+              </h2>
+              <p data-reveal style={revealStyle(160)}
+                className="font-body text-white/50 text-sm leading-relaxed mb-8">
+                Entre em contato e vamos conversar sobre a sessão dos seus sonhos.
+              </p>
+              <div data-reveal style={revealStyle(240)} className="flex flex-wrap gap-3 justify-center">
+                <a
+                  href="https://wa.me/5587988449536"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full
+                             bg-gold text-dark font-body font-semibold text-sm
+                             transition-all duration-300 hover:brightness-110
+                             active:scale-95 min-h-[44px]"
+                >
+                  Agendar sessão
+                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 12L12 2M12 2H5M12 2v7"
+                      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </a>
+                <Link
+                  to="/trabalhos"
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full
+                             border border-white/20 text-white/70 font-body text-sm
+                             transition-all duration-300 hover:border-white/50 hover:text-white
+                             active:scale-95 min-h-[44px]"
+                >
+                  Ver portfólio
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
     </main>
-  );
+  )
 }
