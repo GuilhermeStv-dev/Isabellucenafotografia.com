@@ -384,7 +384,7 @@ export default function Home() {
                             srcSet={imgSrc.srcSet}
                             sizes="75vw"
                             alt={cat.label}
-                            loading={i < 2 ? 'eager' : 'lazy'}
+                            loading="eager"
                             decoding="async"
                             className="absolute inset-0 w-full h-full object-cover
                                        transition-transform duration-500 group-active:scale-105"
@@ -462,13 +462,13 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* ── DESKTOP: Grid editorial — BUG DO STYLE DUPLO CORRIGIDO ── */}
+              {/* ── DESKTOP: Grid editorial ── */}
               <div className="hidden md:block px-8">
                 <div
                   data-reveal
                   style={{
                     ...revealStyle(100),
-                    gridTemplateRows: 'repeat(3, 180px)',  // ← merged into single style object
+                    gridTemplateRows: 'repeat(3, 180px)',
                   }}
                   className="grid grid-cols-3 gap-3"
                 >

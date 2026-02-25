@@ -1,6 +1,5 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { ArrowLeft, Eye, Heart } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
 import GalleryGrid from '../components/GalleryGrid'
@@ -9,6 +8,7 @@ import { getResponsiveImageSources } from '../lib/imageOptimization'
 export default function GalleryPage() {
   const { categoryId } = useParams()
   const { categories, photos, ensureCategoryPhotosLoaded, loadingPhotosByCategory } = useGallery()
+  const heroTextRef = useRef(null)
 
   const category = categories.find(c => c.id === categoryId)
   const categoryPhotos = photos[categoryId] || []
@@ -18,6 +18,20 @@ export default function GalleryPage() {
     if (!categoryId) return
     ensureCategoryPhotosLoaded(categoryId)
   }, [categoryId, ensureCategoryPhotosLoaded])
+
+  // CSS reveal no título — sem Framer Motion
+  useEffect(() => {
+    const el = heroTextRef.current
+    if (!el) return
+    el.style.opacity = '0'
+    el.style.transform = 'translateY(30px)'
+    el.style.transition = 'opacity 0.7s ease, transform 0.7s ease'
+    const timer = setTimeout(() => {
+      el.style.opacity = '1'
+      el.style.transform = 'translateY(0)'
+    }, 80)
+    return () => clearTimeout(timer)
+  }, [categoryId])
 
   if (!category) {
     return (
@@ -40,19 +54,25 @@ export default function GalleryPage() {
     <div className="bg-dark min-h-screen">
       {/* ── Hero ── */}
       <section className="relative h-[45vh] md:h-[55vh] flex items-end overflow-hidden">
-        <img src={heroImage.src} srcSet={heroImage.srcSet} sizes="100vw" alt={category.label} className="absolute inset-0 w-full h-full object-cover opacity-50" loading="eager" fetchPriority="high" decoding="async" onError={(event) => {
-          if (heroImage.fallbackSrc && event.currentTarget.src !== heroImage.fallbackSrc) {
-            event.currentTarget.src = heroImage.fallbackSrc
-            event.currentTarget.srcset = ''
-          }
-        }} />
+        <img
+          src={heroImage.src}
+          srcSet={heroImage.srcSet}
+          sizes="100vw"
+          alt={category.label}
+          className="absolute inset-0 w-full h-full object-cover opacity-50"
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
+          onError={(event) => {
+            if (heroImage.fallbackSrc && event.currentTarget.src !== heroImage.fallbackSrc) {
+              event.currentTarget.src = heroImage.fallbackSrc
+              event.currentTarget.srcset = ''
+            }
+          }}
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/50 to-transparent" />
         <div className="relative z-10 max-w-7xl mx-auto px-6 pb-10 w-full">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-          >
+          <div ref={heroTextRef}>
             <h1 className="font-display text-4xl md:text-5xl italic mb-3">{category.label}</h1>
             <div className="flex items-center gap-6 text-white/40 text-sm">
               <span className="flex items-center gap-1.5">
@@ -62,14 +82,17 @@ export default function GalleryPage() {
                 <Heart size={14} /> {totalLikes.toLocaleString('pt-BR')} curtidas
               </span>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
       {/* ── Gallery ── */}
       <section className="py-12 max-w-7xl mx-auto px-6">
         <div className="mb-8">
-          <Link to="/trabalhos" className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors">
+          <Link
+            to="/trabalhos"
+            className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors"
+          >
             <ArrowLeft size={14} /> Voltar aos trabalhos
           </Link>
         </div>
