@@ -101,9 +101,9 @@ export default function GalleryPage() {
         <div className="mb-8">
           <Link
             to="/trabalhos"
-            className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors btn-arrow-hover"
           >
-            <ArrowLeft size={14} /> Voltar aos trabalhos
+            <ArrowLeft size={14} className="arrow-icon" /> Voltar aos trabalhos
           </Link>
         </div>
 

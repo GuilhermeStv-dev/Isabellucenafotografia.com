@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo, memo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
 import FotoIsabel from '../assets/foto-isabel.webp'
@@ -145,11 +146,8 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout, onLoad }) => {
                         flex items-center justify-center
                         opacity-0 group-hover:opacity-100
                         translate-y-1 group-hover:translate-y-0
-                        transition-all duration-300">
-          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-            <path d="M2 10L10 2M10 2H4M10 2v6"
-              stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+                        transition-all duration-300 btn-arrow-hover">
+          <ArrowRight size={14} color="white" />
         </div>
       </div>
     </Link>
@@ -366,12 +364,10 @@ export default function Home() {
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-full
                            bg-gold text-dark font-body font-semibold text-sm
                            transition-all duration-300 hover:brightness-110
-                           active:scale-95 min-h-[44px]"
+                           active:scale-95 min-h-[44px] btn-arrow-hover"
               >
                 Agendar sessão
-                <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                  <path d="M2 12L12 2M12 2H5M12 2v7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                </svg>
+                <ArrowRight size={16} />
               </a>
               <button
                 onClick={() => scrollTo('trabalhos-home')}
@@ -455,13 +451,10 @@ export default function Home() {
               className="shrink-0 inline-flex items-center gap-2 px-4 md:px-5 py-2.5 rounded-full
                          border border-white/20 text-white/60 font-body text-xs md:text-sm
                          transition-all duration-300 hover:border-gold/50 hover:text-white
-                         min-h-[44px]"
+                         min-h-[44px] btn-arrow-hover"
             >
               Ver todos
-              <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                <path d="M2 10L10 2M10 2H4M10 2v6"
-                  stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-              </svg>
+              <ArrowRight size={14} />
             </Link>
           </div>
 
@@ -648,13 +641,10 @@ export default function Home() {
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-full
                              bg-gold text-dark font-body font-semibold text-sm
                              transition-all duration-300 hover:brightness-110
-                             active:scale-95 min-h-[44px]"
+                             active:scale-95 min-h-[44px] btn-arrow-hover"
                 >
                   Falar com Isabel
-                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                    <path d="M2 12L12 2M12 2H5M12 2v7"
-                      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
+                  <ArrowRight size={16} />
                 </a>
               </div>
             </div>
@@ -768,13 +758,10 @@ export default function Home() {
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-full
                              bg-gold text-dark font-body font-semibold text-sm
                              transition-all duration-300 hover:brightness-110
-                             active:scale-95 min-h-[44px]"
+                             active:scale-95 min-h-[44px] btn-arrow-hover"
                 >
                   Agendar sessão
-                  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-                    <path d="M2 12L12 2M12 2H5M12 2v7"
-                      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
+                  <ArrowRight size={16} />
                 </a>
                 <Link
                   to="/trabalhos"

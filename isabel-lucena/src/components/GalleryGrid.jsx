@@ -5,33 +5,6 @@ import { getResponsiveImageSources } from '../lib/imageOptimization'
 
 const CHUNK = 9
 
-function GridSkeleton() {
-  const blocks = Array.from({ length: CHUNK })
-
-  return (
-    <div className="grid grid-cols-2 gap-3 md:gap-4" aria-hidden="true">
-      {blocks.map((_, index) => (
-        <div key={index} className="relative overflow-hidden rounded-lg aspect-[3/4] bg-dark-surface">
-          <div
-            className="absolute inset-0"
-            style={{
-              background: 'linear-gradient(90deg, #1A1A1A 0%, #2E2E2E 50%, #1A1A1A 100%)',
-              backgroundSize: '200% 100%',
-              animation: 'shimmer 1.4s infinite linear',
-            }}
-          />
-        </div>
-      ))}
-      <style>{`
-        @keyframes shimmer {
-          0%   { background-position: 200% 0; }
-          100% { background-position: -200% 0; }
-        }
-      `}</style>
-    </div>
-  )
-}
-
 function FullscreenViewer({
   photo,
   index,
@@ -127,7 +100,6 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
   const [open, setOpen] = useState(false)
   const [index, setIndex] = useState(0)
   const [visible, setVisible] = useState(CHUNK)
-  const [loadedIds, setLoadedIds] = useState(() => new Set())
 
   const likesKey = `il_liked_photos_${categoryId || 'global'}`
   const [likedByUser, setLikedByUser] = useState(() => {
@@ -162,20 +134,8 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
     }
   }, [likesKey])
 
-  // Reseta o estado de carregamento apenas quando muda a categoria
-  useEffect(() => {
-    setLoadedIds(new Set())
-  }, [categoryId])
 
   const visiblePhotos = useMemo(() => photos.slice(0, visible), [photos, visible])
-  const visibleIds = useMemo(
-    () => visiblePhotos.map((photo) => String(photo.id)),
-    [visiblePhotos]
-  )
-  const allVisibleLoaded = useMemo(
-    () => visibleIds.length === 0 || visibleIds.every((photoId) => loadedIds.has(photoId)),
-    [visibleIds, loadedIds]
-  )
 
   const { leftCol, rightCol } = useMemo(() => {
     const left = []
@@ -211,16 +171,7 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
     setOpen(true)
   }, [])
 
-  const handleLoadComplete = useCallback((photoId) => {
-    if (!photoId) return
-    setLoadedIds((prev) => {
-      const photoKey = String(photoId)
-      if (prev.has(photoKey)) return prev
-      const next = new Set(prev)
-      next.add(photoKey)
-      return next
-    })
-  }, [])
+  const handleLoadComplete = useCallback(() => {}, [])
 
   const handlePrev = useCallback(() => {
     if (photos.length <= 1) return
@@ -262,9 +213,7 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
 
   return (
     <div>
-      {!allVisibleLoaded && <GridSkeleton />}
-
-      <div style={{ opacity: allVisibleLoaded ? 1 : 0, transition: 'opacity 0.35s ease' }}>
+      <div style={{ opacity: 1, transition: 'opacity 0.35s ease' }}>
         <div className="grid grid-cols-2 gap-3 md:gap-4">
           <div className="flex flex-col gap-3 md:gap-4">
             {leftCol.map((photo) => (

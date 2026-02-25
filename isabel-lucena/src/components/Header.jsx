@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
 import LogoBranca from '../assets/Logo-horzontal-branca.webp'
 import LogoPreta from '../assets/Logo-horzontal-preta.webp'
 
@@ -91,13 +92,10 @@ export default function Header() {
                        border border-white/20 text-white/80 font-body text-sm
                        transition-all duration-300
                        hover:bg-gold hover:border-gold hover:text-dark
-                       active:scale-95"
+                       active:scale-95 btn-arrow-hover"
           >
             Contato
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-              <path d="M2 10L10 2M10 2H4M10 2v6"
-                stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <ArrowRight size={15} />
           </a>
 
           {/* Botão hamburger — mobile */}
@@ -196,13 +194,10 @@ export default function Header() {
             className="w-full flex items-center justify-center gap-2
                        py-4 rounded-2xl
                        bg-gold text-dark font-body font-semibold text-sm
-                       transition-all duration-250 active:scale-95 min-h-[52px]"
+                       transition-all duration-250 active:scale-95 min-h-[52px] btn-arrow-hover"
           >
             Falar no WhatsApp
-            <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
-              <path d="M2 12L12 2M12 2H5M12 2v7"
-                stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <ArrowRight size={16} />
           </a>
           <p className="font-body text-[11px] text-white/20 text-center mt-4">
             Paulo Afonso · Bahia
