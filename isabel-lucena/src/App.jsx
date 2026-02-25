@@ -1,6 +1,7 @@
 // src/App.jsx
 import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import ScrollToTop from './components/ScrollToTop';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import WhatsAppButton from './components/WhatsAppButton';
@@ -72,6 +73,7 @@ function SiteLayout() {
 
   return (
     <>
+      <ScrollToTop />
       <Header />
       <Suspense fallback={<PageLoader />}>
         <Routes>
