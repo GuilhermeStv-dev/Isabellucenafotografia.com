@@ -143,18 +143,8 @@ export default function Header() {
         `}
       >
         {/* Topo do drawer */}
-        <div className="flex items-center justify-between px-6 pt-7 pb-5 border-b border-white/8">
+        <div className="flex items-center px-6 pt-7 pb-5 border-b border-white/8">
           <img src={LogoBranca} alt="Isabel Lucena" className="h-7 w-auto" />
-          <button
-            onClick={() => setMenuOpen(false)}
-            className="w-9 h-9 flex items-center justify-center rounded-full
-                       border border-white/10 text-white/40 hover:text-white transition-colors"
-            aria-label="Fechar menu"
-          >
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          </button>
         </div>
 
         {/* Links com animação de entrada em cascata */}

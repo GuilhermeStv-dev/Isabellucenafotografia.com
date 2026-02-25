@@ -18,6 +18,11 @@ function PhotoCard({ photo, onClick, onLoadComplete }) {
   )
 
   useEffect(() => {
+    notifiedRef.current = false
+    setLoaded(false)
+  }, [photo?.id, photo?.url])
+
+  useEffect(() => {
     if (!photo?.url && !notifiedRef.current) {
       notifiedRef.current = true
       onLoadComplete?.(photo?.id)
@@ -89,6 +94,9 @@ function PhotoCard({ photo, onClick, onLoadComplete }) {
 export default memo(PhotoCard, (prev, next) =>
   prev.photo.id === next.photo.id &&
   prev.photo.url === next.photo.url &&
+  prev.photo.views === next.photo.views &&
+  prev.photo.likes === next.photo.likes &&
+  prev.photo.comments === next.photo.comments &&
   prev.onClick === next.onClick &&
   prev.onLoadComplete === next.onLoadComplete
 )

@@ -149,12 +149,32 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
   }, [likedByUser, likesKey])
 
   useEffect(() => {
-    setLoadedIds(new Set())
+    try {
+      const raw = JSON.parse(localStorage.getItem(likesKey) || '[]')
+      setLikedByUser(new Set(Array.isArray(raw) ? raw : []))
+    } catch {
+      setLikedByUser(new Set())
+    }
+  }, [likesKey])
+
+  useEffect(() => {
+    const visibleIds = new Set(photos.slice(0, visible).map((photo) => String(photo.id)))
+    setLoadedIds((prev) => {
+      const next = new Set()
+      prev.forEach((id) => {
+        if (visibleIds.has(String(id))) next.add(String(id))
+      })
+      return next
+    })
   }, [visible, photos])
 
   const visiblePhotos = useMemo(() => photos.slice(0, visible), [photos, visible])
-  const expectedLoaded = visiblePhotos.length
-  const allVisibleLoaded = expectedLoaded === 0 || loadedIds.size >= expectedLoaded
+  const visibleIds = useMemo(
+    () => visiblePhotos.map((photo) => String(photo.id)),
+    [visiblePhotos]
+  )
+  const allVisibleLoaded =
+    visibleIds.length === 0 || visibleIds.every((photoId) => loadedIds.has(photoId))
 
   const leftCol = visiblePhotos.filter((_, itemIndex) => itemIndex % 2 === 0)
   const rightCol = visiblePhotos.filter((_, itemIndex) => itemIndex % 2 !== 0)
@@ -186,19 +206,31 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
   const handleLoadComplete = useCallback((photoId) => {
     if (!photoId) return
     setLoadedIds((prev) => {
-      if (prev.has(photoId)) return prev
+      const photoKey = String(photoId)
+      if (prev.has(photoKey)) return prev
       const next = new Set(prev)
-      next.add(photoId)
+      next.add(photoKey)
       return next
     })
   }, [])
 
   const handlePrev = useCallback(() => {
+    if (photos.length <= 1) return
     setIndex((current) => (current - 1 + photos.length) % photos.length)
   }, [photos.length])
 
   const handleNext = useCallback(() => {
+    if (photos.length <= 1) return
     setIndex((current) => (current + 1) % photos.length)
+  }, [photos.length])
+
+  useEffect(() => {
+    if (photos.length === 0) {
+      setOpen(false)
+      setIndex(0)
+      return
+    }
+    setIndex((current) => Math.min(current, photos.length - 1))
   }, [photos.length])
 
   const currentPhoto = photos[index]

@@ -24,6 +24,29 @@ const getTagFromSlug = (slug = '', nome = '') => {
 }
 
 const GalleryContext = createContext(null)
+const LOCAL_METRICS_KEY = 'il_photo_metrics'
+
+const readLocalMetrics = () => {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LOCAL_METRICS_KEY) || '{}')
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  } catch {
+    return {}
+  }
+}
+
+const writeLocalMetrics = (metrics) => {
+  try {
+    localStorage.setItem(LOCAL_METRICS_KEY, JSON.stringify(metrics))
+  } catch {
+    // noop
+  }
+}
+
+const mergeMetricValue = (photoId, field, dbValue, localMetrics) => {
+  const local = Number(localMetrics?.[String(photoId)]?.[field] || 0)
+  return Math.max(Number(dbValue || 0), local)
+}
 
 export function GalleryProvider({ children }) {
   const loadedRef = useRef(new Set())    // categorias com todas as fotos carregadas
@@ -38,6 +61,7 @@ export function GalleryProvider({ children }) {
 
   const [photos, setPhotos] = useState({})
   const [loadingPhotosByCategory, setLoadingPhotosByCategory] = useState({})
+  const localMetricsRef = useRef(readLocalMetrics())
 
   useEffect(() => {
     localStorage.setItem('il_categories', JSON.stringify(categories))
@@ -85,8 +109,8 @@ export function GalleryProvider({ children }) {
           fotosPorCategoria[foto.categoria_slug] = [{
             id: String(foto.id),
             url: foto.url,
-            views: Number(foto.views || 0),
-            likes: Number(foto.likes || 0),
+            views: mergeMetricValue(foto.id, 'views', foto.views, localMetricsRef.current),
+            likes: mergeMetricValue(foto.id, 'likes', foto.likes, localMetricsRef.current),
           }]
           // Com RPC DISTINCT ON, a capa já está carregada mas o restante não
           // (não marca como "fully loaded" para permitir lazy load da galeria)
@@ -112,8 +136,8 @@ export function GalleryProvider({ children }) {
             fotosPorCategoria[foto.categoria_slug] = [{
               id: String(foto.id),
               url: foto.url,
-              views: Number(foto.views || 0),
-              likes: Number(foto.likes || 0),
+              views: mergeMetricValue(foto.id, 'views', foto.views, localMetricsRef.current),
+              likes: mergeMetricValue(foto.id, 'likes', foto.likes, localMetricsRef.current),
             }]
           }
         }
@@ -129,10 +153,11 @@ export function GalleryProvider({ children }) {
   }, [])
 
   // ── Carregamento lazy — todas as fotos de uma categoria ──
-  const ensureCategoryPhotosLoaded = useCallback(async (categoryId) => {
+  const ensureCategoryPhotosLoaded = useCallback(async (categoryId, options = {}) => {
+    const { force = false } = options
     if (!categoryId) return
     if (loadingRef.current[categoryId]) return
-    if (loadedRef.current.has(categoryId)) return
+    if (!force && loadedRef.current.has(categoryId)) return
 
     loadingRef.current[categoryId] = true
     setLoadingPhotosByCategory((prev) => ({ ...prev, [categoryId]: true }))
@@ -151,8 +176,8 @@ export function GalleryProvider({ children }) {
           [categoryId]: data.map((f) => ({
             id: String(f.id),
             url: f.url,
-            views: Number(f.views || 0),
-            likes: Number(f.likes || 0),
+            views: mergeMetricValue(f.id, 'views', f.views, localMetricsRef.current),
+            likes: mergeMetricValue(f.id, 'likes', f.likes, localMetricsRef.current),
           })),
         }))
         loadedRef.current.add(categoryId)
@@ -203,12 +228,20 @@ export function GalleryProvider({ children }) {
 
     if (nextViews === null) return
 
+    localMetricsRef.current = {
+      ...localMetricsRef.current,
+      [String(photoId)]: {
+        ...(localMetricsRef.current[String(photoId)] || {}),
+        views: nextViews,
+      },
+    }
+    writeLocalMetrics(localMetricsRef.current)
+
     try {
       await supabase
         .from('fotos')
         .update({ views: nextViews })
-        .eq('id', photoId)
-        .eq('categoria_slug', categoryId)
+        .eq('id', Number(photoId))
     } catch {
       // noop: mantém UX local mesmo se persistência falhar
     }
@@ -233,12 +266,20 @@ export function GalleryProvider({ children }) {
 
     if (nextLikes === null) return
 
+    localMetricsRef.current = {
+      ...localMetricsRef.current,
+      [String(photoId)]: {
+        ...(localMetricsRef.current[String(photoId)] || {}),
+        likes: nextLikes,
+      },
+    }
+    writeLocalMetrics(localMetricsRef.current)
+
     try {
       await supabase
         .from('fotos')
         .update({ likes: nextLikes })
-        .eq('id', photoId)
-        .eq('categoria_slug', categoryId)
+        .eq('id', Number(photoId))
     } catch {
       // noop: mantém UX local mesmo se persistência falhar
     }

@@ -23,7 +23,7 @@ export default function GalleryPage() {
 
   useEffect(() => {
     if (!categoryId) return
-    ensureCategoryPhotosLoaded(categoryId)
+    ensureCategoryPhotosLoaded(categoryId, { force: true })
   }, [categoryId, ensureCategoryPhotosLoaded])
 
   // CSS reveal no título — sem Framer Motion
@@ -51,8 +51,8 @@ export default function GalleryPage() {
     )
   }
 
-  const heroBg = categoryPhotos[0]?.url || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=1400'
-  const heroImage = getResponsiveImageSources(heroBg)
+  const heroBg = categoryPhotos[0]?.url
+  const heroImage = heroBg ? getResponsiveImageSources(heroBg) : null
 
   const totalViews = categoryPhotos.reduce((s, p) => s + (p.views || 0), 0)
   const totalLikes = categoryPhotos.reduce((s, p) => s + (p.likes || 0), 0)
@@ -61,22 +61,25 @@ export default function GalleryPage() {
     <div className="bg-dark min-h-screen">
       {/* ── Hero ── */}
       <section className="relative h-[45vh] md:h-[55vh] flex items-end overflow-hidden">
-        <img
-          src={heroImage.src}
-          srcSet={heroImage.srcSet}
-          sizes="100vw"
-          alt={category.label}
-          className="absolute inset-0 w-full h-full object-cover opacity-50"
-          loading="eager"
-          fetchPriority="high"
-          decoding="async"
-          onError={(event) => {
-            if (heroImage.fallbackSrc && event.currentTarget.src !== heroImage.fallbackSrc) {
-              event.currentTarget.src = heroImage.fallbackSrc
-              event.currentTarget.srcset = ''
-            }
-          }}
-        />
+        {heroImage && (
+          <img
+            src={heroImage.src}
+            srcSet={heroImage.srcSet}
+            sizes="100vw"
+            alt={category.label}
+            className="absolute inset-0 w-full h-full object-cover opacity-50"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            onError={(event) => {
+              if (heroImage.fallbackSrc && event.currentTarget.src !== heroImage.fallbackSrc) {
+                event.currentTarget.src = heroImage.fallbackSrc
+                event.currentTarget.srcset = ''
+              }
+            }}
+          />
+        )}
+        {!heroImage && <div className="absolute inset-0 bg-dark-200" />}
         <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/50 to-transparent" />
         <div className="relative z-10 max-w-7xl mx-auto px-6 pb-10 w-full">
           <div ref={heroTextRef}>
