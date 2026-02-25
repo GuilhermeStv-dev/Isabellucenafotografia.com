@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo, memo } from 'react'
+import { useEffect, useRef, useState, useMemo, memo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { useGallery } from '../context/GalleryContext'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
@@ -47,7 +47,7 @@ const revealStyle = (delay = 0) => ({
    SUB-COMPONENTES
 ═══════════════════════════════════════════════════ */
 
-const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
+const CategoryCard = memo(({ cat, coverPhoto, index, layout, onLoad }) => {
   const [loaded, setLoaded] = useState(false)
 
   const imgSrc = useMemo(() => {
@@ -60,6 +60,16 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
     })
   }, [coverPhoto?.url])
 
+  const handleLoad = () => {
+    setLoaded(true)
+    onLoad?.()
+  }
+
+  // Se não tem foto, avisa o pai que esse slot está "pronto"
+  useEffect(() => {
+    if (!imgSrc) onLoad?.()
+  }, [imgSrc]) // eslint-disable-line
+
   const desktopClass = {
     tall: 'md:row-span-2',
     wide: 'md:col-span-2',
@@ -69,12 +79,10 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
   return (
     <Link
       to={`/galeria/${cat.id}`}
-      data-reveal
       className={`group relative overflow-hidden rounded-2xl bg-dark-200
                   aspect-[3/4] ${desktopClass}`}
-      style={revealStyle(index * 80)}
     >
-      {/* Skeleton — some quando imagem carrega */}
+      {/* Skeleton — visível até imagem carregar */}
       <div
         style={{ opacity: loaded ? 0 : 1, transition: 'opacity 0.3s ease', pointerEvents: 'none' }}
         className="absolute inset-0"
@@ -99,7 +107,7 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
         `}</style>
       </div>
 
-      {/* Conteúdo real — aparece completo quando imagem carrega */}
+      {/* Conteúdo real — aparece quando imagem carrega */}
       <div
         style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
         className="absolute inset-0"
@@ -112,8 +120,8 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
             alt={cat.label}
             loading={index < 2 ? 'eager' : 'lazy'}
             decoding="async"
-            onLoad={() => setLoaded(true)}
-            onError={() => setLoaded(true)}
+            onLoad={handleLoad}
+            onError={handleLoad}
             className="absolute inset-0 w-full h-full object-cover
                        transition-transform duration-700 ease-out
                        group-hover:scale-105 will-change-transform"
@@ -146,7 +154,11 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
       </div>
     </Link>
   )
-}, (prev, next) => prev.coverPhoto?.url === next.coverPhoto?.url && prev.cat.id === next.cat.id)
+}, (prev, next) =>
+  prev.coverPhoto?.url === next.coverPhoto?.url &&
+  prev.cat.id === next.cat.id &&
+  prev.onLoad === next.onLoad
+)
 
 CategoryCard.displayName = 'CategoryCard'
 
@@ -248,6 +260,18 @@ export default function Home() {
   const { categories, photos } = useGallery()
   const carouselRef = useRef(null)
   const [activeCard, setActiveCard] = useState(0)
+  const [loadedCount, setLoadedCount] = useState(0)
+  const gridRef = useRef(null)
+
+  const handleCardLoad = useCallback(() => {
+    setLoadedCount(c => c + 1)
+  }, [])
+
+  // Só mostra categorias que têm pelo menos 1 foto
+  const categoriesWithPhotos = useMemo(
+    () => categories.filter((cat) => photos[cat.id]?.length > 0),
+    [categories, photos]
+  )
 
   const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -264,11 +288,17 @@ export default function Home() {
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Só mostra categorias que têm pelo menos 1 foto
-  const categoriesWithPhotos = useMemo(
-    () => categories.filter((cat) => photos[cat.id]?.length > 0),
-    [categories, photos]
-  )
+  // Quando todos os cards do grid desktop carregarem, anima o grid inteiro
+  useEffect(() => {
+    const total = categoriesWithPhotos.slice(0, 7).length
+    if (total === 0) return
+    if (loadedCount < total) return
+
+    const el = gridRef.current
+    if (!el) return
+    el.style.opacity = '1'
+    el.style.transform = 'translateY(0)'
+  }, [loadedCount, categoriesWithPhotos])
 
   const desktopLayouts = ['tall', 'normal', 'normal', 'tall', 'normal', 'normal', 'normal']
 
@@ -521,7 +551,13 @@ export default function Home() {
                   CategoryCard agora tem reveal próprio, sem data-reveal no JSX */}
               <div className="hidden md:block px-8">
                 <div
-                  style={{ gridTemplateRows: 'repeat(3, 180px)' }}
+                  ref={gridRef}
+                  style={{
+                    gridTemplateRows: 'repeat(3, 180px)',
+                    opacity: 0,
+                    transform: 'translateY(28px)',
+                    transition: 'opacity 0.7s cubic-bezier(0.25,0.46,0.45,0.94), transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94)',
+                  }}
                   className="grid grid-cols-3 gap-3"
                 >
                   {categoriesWithPhotos.slice(0, 7).map((cat, i) => (
@@ -531,6 +567,7 @@ export default function Home() {
                       coverPhoto={photos[cat.id]?.[0]}
                       index={i}
                       layout={desktopLayouts[i]}
+                      onLoad={handleCardLoad}
                     />
                   ))}
                 </div>
