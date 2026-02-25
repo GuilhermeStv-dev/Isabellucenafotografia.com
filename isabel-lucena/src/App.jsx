@@ -11,7 +11,6 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Trabalhos = lazy(() => import('./pages/Trabalhos'));
 const GalleryPage = lazy(() => import('./pages/GalleryPage'));
 
-// Placeholder para páginas ainda não criadas
 const PlaceholderPage = ({ title }) => (
   <main className="min-h-screen flex items-center justify-center pt-24">
     <h1 className="font-display text-4xl text-gold">{title}</h1>
@@ -24,9 +23,14 @@ const PageLoader = () => (
   </main>
 );
 
-// Layout do site público (com Header, Footer e WhatsApp)
 function SiteLayout() {
   useEffect(() => {
+    // Safari iOS já tem scroll suave nativo — Lenis causa crash nesses devices
+    const isSafariIOS = /iP(ad|hone|od)/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+
+    if (isSafariIOS) return
+
     const easeInOutCubic = (t) => (t < 0.5
       ? 4 * t * t * t
       : 1 - Math.pow(-2 * t + 2, 3) / 2);
@@ -38,9 +42,6 @@ function SiteLayout() {
     const initLenis = async () => {
       const { default: Lenis } = await import('lenis');
       if (!ativo) return;
-
-      const isSafariIOS = /iP(ad|hone|od)/.test(navigator.userAgent);
-      if (isSafariIOS) return;
 
       lenis = new Lenis({
         duration: 0.75,
@@ -93,7 +94,6 @@ export default function App() {
     <GalleryProvider>
       <BrowserRouter>
         <Routes>
-          {/* Dashboard — tela própria, sem header/footer do site */}
           <Route
             path="/dashboard/*"
             element={(
@@ -102,8 +102,6 @@ export default function App() {
               </Suspense>
             )}
           />
-
-          {/* Site público */}
           <Route path="/*" element={<SiteLayout />} />
         </Routes>
       </BrowserRouter>

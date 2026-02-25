@@ -11,7 +11,6 @@ import FotoIsabel4 from '../assets/Foto-Isabel4.webp'
    HOOKS
 ═══════════════════════════════════════════════════ */
 
-// Scroll reveal via IntersectionObserver
 function useReveal(ref) {
   useEffect(() => {
     const elements = ref?.current
@@ -46,7 +45,6 @@ const revealStyle = (delay = 0) => ({
    SUB-COMPONENTES
 ═══════════════════════════════════════════════════ */
 
-// Card de categoria — memoizado para não re-renderizar sem necessidade
 const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
   const imgSrc = useMemo(() => {
     if (!coverPhoto?.url) return null
@@ -58,7 +56,6 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
     })
   }, [coverPhoto?.url])
 
-  // Proporções alternadas para layout desktop editorial
   const desktopClass = {
     tall: 'md:row-span-2',
     wide: 'md:col-span-2',
@@ -73,7 +70,6 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
                   aspect-[3/4] ${desktopClass}`}
       style={revealStyle(index * 80)}
     >
-      {/* Foto de fundo */}
       {imgSrc ? (
         <img
           src={imgSrc.src}
@@ -93,32 +89,24 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout }) => {
           }}
         />
       ) : (
-        // Skeleton shimmer enquanto carrega
         <div className="absolute inset-0 bg-gradient-to-br from-dark-300 to-dark-200 animate-pulse" />
       )}
 
-      {/* Gradiente base sempre visível */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-
-      {/* Hover overlay sutil */}
       <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
 
-      {/* Conteúdo do card */}
       <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5
                       translate-y-0 group-hover:-translate-y-1 transition-transform duration-300">
-        {/* Tag */}
         <span className="inline-block font-body text-[9px] tracking-[0.25em] uppercase
                          text-gold/90 border border-gold/30 rounded-full
                          px-2.5 py-1 mb-2 bg-black/30 backdrop-blur-sm">
           {cat.tag}
         </span>
-        {/* Nome */}
         <h3 className="font-display text-lg md:text-xl italic text-white leading-tight">
           {cat.label}
         </h3>
       </div>
 
-      {/* Ícone de seta no topo */}
       <div className="absolute top-3.5 right-3.5
                       w-8 h-8 rounded-full
                       border border-white/20 bg-black/20 backdrop-blur-sm
@@ -164,12 +152,10 @@ export default function Home() {
   const carouselRef = useRef(null)
   const [activeCard, setActiveCard] = useState(0)
 
-  // Scroll suave para âncoras
   const scrollTo = (id) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  // Atualiza dot ativo conforme scroll do carrossel
   useEffect(() => {
     const el = carouselRef.current
     if (!el) return
@@ -181,18 +167,22 @@ export default function Home() {
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
 
-  // Layout editorial desktop: alterna tall/normal para primeira linha
+  // ── Só mostra categorias que têm pelo menos 1 foto ──
+  const categoriesWithPhotos = useMemo(
+    () => categories.filter((cat) => photos[cat.id]?.length > 0),
+    [categories, photos]
+  )
+
   const desktopLayouts = ['tall', 'normal', 'normal', 'tall', 'normal', 'normal', 'normal']
 
-  /* ─────────────────────────────────────────────────────
-     1 · HERO
-  ───────────────────────────────────────────────────── */
   return (
     <main>
 
+      {/* ─────────────────────────────────────────────────────
+          1 · HERO
+      ───────────────────────────────────────────────────── */}
       <section className="relative min-h-[100svh] flex flex-col justify-end pb-12 overflow-hidden
                           md:flex-row md:items-center md:justify-start md:pb-0">
-        {/* Foto de fundo — ocupa tela inteira no mobile */}
         <div className="absolute inset-0">
           <img
             src={FotoIsabel}
@@ -202,17 +192,13 @@ export default function Home() {
             fetchPriority="high"
             decoding="async"
           />
-          {/* Gradiente mobile: escurece de baixo */}
           <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/60 to-dark/20 md:hidden" />
-          {/* Gradiente desktop: escurece da esquerda */}
           <div className="hidden md:block absolute inset-0
                           bg-gradient-to-r from-dark via-dark/80 to-transparent" />
         </div>
 
-        {/* Conteúdo */}
         <div className="relative z-10 w-full max-w-6xl mx-auto px-5 md:px-8 pt-24 md:pt-0">
           <div className="md:max-w-lg">
-
             <p
               data-reveal
               style={revealStyle(50)}
@@ -245,7 +231,6 @@ export default function Home() {
               Cada imagem é uma promessa de que aquele momento não será esquecido.
             </p>
 
-            {/* CTAs */}
             <div data-reveal style={revealStyle(350)} className="flex flex-wrap gap-3">
               <a
                 href="https://wa.me/5587988449536"
@@ -271,11 +256,9 @@ export default function Home() {
                 Ver trabalhos
               </button>
             </div>
-
           </div>
         </div>
 
-        {/* Badge estatística */}
         <div
           data-reveal
           style={revealStyle(500)}
@@ -296,7 +279,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Scroll indicator */}
         <button
           onClick={() => scrollTo('trabalhos-home')}
           aria-label="Scroll para baixo"
@@ -316,7 +298,6 @@ export default function Home() {
       <section id="trabalhos-home" className="py-14 md:py-24 bg-dark overflow-hidden">
         <div className="max-w-6xl mx-auto">
 
-          {/* Header da seção */}
           <div className="px-5 md:px-8 flex items-end justify-between gap-4 mb-8 md:mb-10">
             <div>
               <p
@@ -356,154 +337,154 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* ── MOBILE: Carrossel horizontal com snap ── */}
-          <div className="md:hidden relative">
+          {/* Só renderiza se tiver categorias com fotos */}
+          {categoriesWithPhotos.length === 0 ? null : (
+            <>
+              {/* ── MOBILE: Carrossel ── */}
+              <div className="md:hidden relative">
+                <div className="pointer-events-none absolute right-0 top-0 bottom-4 w-14 z-10
+                                bg-gradient-to-l from-dark to-transparent" />
 
-            {/* Fade na borda direita (indica scroll) */}
-            <div className="pointer-events-none absolute right-0 top-0 bottom-4 w-14 z-10
-                            bg-gradient-to-l from-dark to-transparent" />
+                <div
+                  ref={carouselRef}
+                  className="flex gap-3 px-5 pb-3 overflow-x-auto"
+                  style={{
+                    scrollSnapType: 'x mandatory',
+                    WebkitOverflowScrolling: 'touch',
+                    scrollbarWidth: 'none',
+                    msOverflowStyle: 'none',
+                  }}
+                >
+                  {categoriesWithPhotos.slice(0, 7).map((cat, i) => {
+                    const coverPhoto = photos[cat.id]?.[0]
+                    const imgSrc = coverPhoto?.url
+                      ? getResponsiveImageSources(coverPhoto.url, {
+                        widths: [320, 480],
+                        qualities: [70, 75],
+                        fallbackWidth: 480,
+                        fallbackQuality: 75,
+                      })
+                      : null
 
-            {/* Trilho de scroll */}
-            <div
-              ref={carouselRef}
-              className="flex gap-3 px-5 pb-3 overflow-x-auto"
-              style={{
-                scrollSnapType: 'x mandatory',
-                WebkitOverflowScrolling: 'touch',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-              }}
-            >
-              {categories.slice(0, 7).map((cat, i) => {
-                const coverPhoto = photos[cat.id]?.[0]
-                const imgSrc = coverPhoto?.url
-                  ? getResponsiveImageSources(coverPhoto.url, {
-                    widths: [320, 480],
-                    qualities: [70, 75],
-                    fallbackWidth: 480,
-                    fallbackQuality: 75,
-                  })
-                  : null
+                    return (
+                      <Link
+                        key={cat.id}
+                        to={`/galeria/${cat.id}`}
+                        className="group relative shrink-0 rounded-2xl overflow-hidden bg-dark-200"
+                        style={{
+                          scrollSnapAlign: 'start',
+                          scrollSnapStop: 'always',
+                          width: 'min(75vw, 260px)',
+                          aspectRatio: '3/4',
+                        }}
+                      >
+                        {imgSrc ? (
+                          <img
+                            src={imgSrc.src}
+                            srcSet={imgSrc.srcSet}
+                            sizes="75vw"
+                            alt={cat.label}
+                            loading={i < 2 ? 'eager' : 'lazy'}
+                            decoding="async"
+                            className="absolute inset-0 w-full h-full object-cover
+                                       transition-transform duration-500 group-active:scale-105"
+                            onError={(e) => {
+                              if (imgSrc.fallbackSrc && e.currentTarget.src !== imgSrc.fallbackSrc) {
+                                e.currentTarget.src = imgSrc.fallbackSrc
+                                e.currentTarget.srcset = ''
+                              }
+                            }}
+                          />
+                        ) : (
+                          <div className="absolute inset-0 bg-dark-300 animate-pulse" />
+                        )}
 
-                return (
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+
+                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                          <span className="inline-block font-body text-[9px] tracking-[0.2em] uppercase
+                                           text-gold border border-gold/30 rounded-full px-2 py-0.5 mb-2
+                                           bg-black/30 backdrop-blur-sm">
+                            {cat.tag}
+                          </span>
+                          <h3 className="font-display text-lg italic text-white">{cat.label}</h3>
+                        </div>
+
+                        <div className="absolute top-3.5 left-3.5
+                                        font-body text-[10px] text-white/40 tracking-wider">
+                          {String(i + 1).padStart(2, '0')}
+                        </div>
+                      </Link>
+                    )
+                  })}
+
                   <Link
-                    key={cat.id}
-                    to={`/galeria/${cat.id}`}
-                    className="group relative shrink-0 rounded-2xl overflow-hidden bg-dark-200"
+                    to="/trabalhos"
+                    className="shrink-0 rounded-2xl border border-white/10 bg-dark-200
+                               flex flex-col items-center justify-center gap-4"
                     style={{
                       scrollSnapAlign: 'start',
-                      scrollSnapStop: 'always',
-                      width: 'min(75vw, 260px)',
+                      width: 'min(55vw, 180px)',
                       aspectRatio: '3/4',
                     }}
                   >
-                    {imgSrc ? (
-                      <img
-                        src={imgSrc.src}
-                        srcSet={imgSrc.srcSet}
-                        sizes="75vw"
-                        alt={cat.label}
-                        loading={i < 2 ? 'eager' : 'lazy'}
-                        decoding="async"
-                        className="absolute inset-0 w-full h-full object-cover
-                                   transition-transform duration-500 group-active:scale-105"
-                        onError={(e) => {
-                          if (imgSrc.fallbackSrc && e.currentTarget.src !== imgSrc.fallbackSrc) {
-                            e.currentTarget.src = imgSrc.fallbackSrc
-                            e.currentTarget.srcset = ''
-                          }
-                        }}
-                      />
-                    ) : (
-                      <div className="absolute inset-0 bg-dark-300 animate-pulse" />
-                    )}
-
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-
-                    <div className="absolute bottom-0 left-0 right-0 p-4">
-                      <span className="inline-block font-body text-[9px] tracking-[0.2em] uppercase
-                                       text-gold border border-gold/30 rounded-full px-2 py-0.5 mb-2
-                                       bg-black/30 backdrop-blur-sm">
-                        {cat.tag}
-                      </span>
-                      <h3 className="font-display text-lg italic text-white">{cat.label}</h3>
+                    <div className="w-11 h-11 rounded-full border border-gold/40
+                                    flex items-center justify-center text-gold">
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path d="M3 8h10M9 4l4 4-4 4"
+                          stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                      </svg>
                     </div>
-
-                    {/* Número do card */}
-                    <div className="absolute top-3.5 left-3.5
-                                    font-body text-[10px] text-white/40 tracking-wider">
-                      {String(i + 1).padStart(2, '0')}
-                    </div>
+                    <p className="font-body text-xs text-white/40 text-center px-4 leading-snug">
+                      Ver todos<br />os trabalhos
+                    </p>
                   </Link>
-                )
-              })}
-
-              {/* Card final — "ver todos" */}
-              <Link
-                to="/trabalhos"
-                className="shrink-0 rounded-2xl border border-white/10 bg-dark-200
-                           flex flex-col items-center justify-center gap-4"
-                style={{
-                  scrollSnapAlign: 'start',
-                  width: 'min(55vw, 180px)',
-                  aspectRatio: '3/4',
-                }}
-              >
-                <div className="w-11 h-11 rounded-full border border-gold/40
-                                flex items-center justify-center text-gold
-                                transition-all duration-300 group-hover:bg-gold group-hover:text-dark">
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8h10M9 4l4 4-4 4"
-                      stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                  </svg>
                 </div>
-                <p className="font-body text-xs text-white/40 text-center px-4 leading-snug">
-                  Ver todos<br />os trabalhos
-                </p>
-              </Link>
-            </div>
 
-            {/* Dots de navegação */}
-            <div className="flex justify-center gap-1.5 mt-4 px-5">
-              {categories.slice(0, 7).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    const el = carouselRef.current
-                    if (!el) return
-                    const cardWidth = el.firstChild?.offsetWidth || 0
-                    el.scrollTo({ left: i * (cardWidth + 12), behavior: 'smooth' })
+                <div className="flex justify-center gap-1.5 mt-4 px-5">
+                  {categoriesWithPhotos.slice(0, 7).map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        const el = carouselRef.current
+                        if (!el) return
+                        const cardWidth = el.firstChild?.offsetWidth || 0
+                        el.scrollTo({ left: i * (cardWidth + 12), behavior: 'smooth' })
+                      }}
+                      className={`rounded-full transition-all duration-300 min-w-[8px] min-h-[8px]
+                        ${activeCard === i
+                          ? 'bg-gold w-5 h-2'
+                          : 'bg-white/20 w-2 h-2 hover:bg-white/40'
+                        }`}
+                      aria-label={`Ir para ${categoriesWithPhotos[i]?.label}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* ── DESKTOP: Grid editorial — BUG DO STYLE DUPLO CORRIGIDO ── */}
+              <div className="hidden md:block px-8">
+                <div
+                  data-reveal
+                  style={{
+                    ...revealStyle(100),
+                    gridTemplateRows: 'repeat(3, 180px)',  // ← merged into single style object
                   }}
-                  className={`rounded-full transition-all duration-300 min-w-[8px] min-h-[8px]
-                    ${activeCard === i
-                      ? 'bg-gold w-5 h-2'
-                      : 'bg-white/20 w-2 h-2 hover:bg-white/40'
-                    }`}
-                  aria-label={`Ir para ${categories[i]?.label}`}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* ── DESKTOP: Grid editorial assimétrico ── */}
-          <div className="hidden md:block px-8">
-            <div
-              data-reveal
-              style={revealStyle(100)}
-              className="grid grid-cols-3 gap-3"
-              style={{ gridTemplateRows: 'repeat(3, 180px)' }}
-            >
-              {categories.slice(0, 7).map((cat, i) => (
-                <CategoryCard
-                  key={cat.id}
-                  cat={cat}
-                  coverPhoto={photos[cat.id]?.[0]}
-                  index={i}
-                  layout={desktopLayouts[i]}
-                />
-              ))}
-            </div>
-          </div>
+                  className="grid grid-cols-3 gap-3"
+                >
+                  {categoriesWithPhotos.slice(0, 7).map((cat, i) => (
+                    <CategoryCard
+                      key={cat.id}
+                      cat={cat}
+                      coverPhoto={photos[cat.id]?.[0]}
+                      index={i}
+                      layout={desktopLayouts[i]}
+                    />
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
         </div>
       </section>
@@ -516,7 +497,6 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-5 md:px-8">
           <div className="flex flex-col md:flex-row md:items-center gap-10 md:gap-16">
 
-            {/* Foto — ocupa metade do grid no desktop, 60% no mobile */}
             <div
               data-reveal
               style={revealStyle(0)}
@@ -531,13 +511,10 @@ export default function Home() {
                   className="w-full h-full object-cover"
                 />
               </div>
-              {/* Detalhe decorativo */}
               <div className="absolute -bottom-4 -right-4 w-24 h-24
                               rounded-2xl border border-gold/20 -z-10" />
               <div className="absolute -top-4 -left-4 w-16 h-16
                               rounded-xl bg-gold/5 border border-gold/15 -z-10" />
-
-              {/* Badge flutuante */}
               <div className="absolute -bottom-2 left-6
                               bg-dark border border-gold/25 rounded-2xl px-4 py-3 shadow-xl">
                 <p className="font-display font-semibold text-xl text-gold leading-none">7+</p>
@@ -545,7 +522,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Texto */}
             <div className="flex-1">
               <p data-reveal style={revealStyle(80)}
                 className="font-body text-gold text-[10px] tracking-[0.3em] uppercase mb-3">
@@ -622,7 +598,6 @@ export default function Home() {
             </h2>
           </div>
 
-          {/* Grid de depoimentos — 1 col mobile, 3 cols desktop */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
             {DEPOIMENTOS.map((dep, i) => (
               <div
@@ -632,7 +607,6 @@ export default function Home() {
                 className="bg-dark-100 border border-dark-300 rounded-2xl p-6 md:p-7
                            flex flex-col gap-4"
               >
-                {/* Estrelas */}
                 <div className="flex gap-0.5">
                   {Array.from({ length: dep.estrelas }).map((_, j) => (
                     <svg key={j} width="13" height="13" viewBox="0 0 24 24" fill="#C9A96E">
@@ -669,13 +643,11 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-5 md:px-8">
           <div className="relative rounded-3xl overflow-hidden bg-dark-200 border border-dark-300 p-8 md:p-14">
 
-            {/* Foto de fundo desfocada */}
             <div className="absolute inset-0 opacity-15">
               <img src={FotoIsabel3} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
             </div>
             <div className="absolute inset-0 bg-gradient-to-br from-dark-200/90 via-dark-200/70 to-dark-200/95" />
 
-            {/* Detalhe dourado */}
             <div className="absolute top-0 left-0 w-40 h-40 rounded-br-full
                             bg-gold/5 border-b border-r border-gold/15" />
 
