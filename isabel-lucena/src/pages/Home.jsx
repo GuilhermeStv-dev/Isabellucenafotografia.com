@@ -162,8 +162,19 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout, onLoad }) => {
 
 CategoryCard.displayName = 'CategoryCard'
 
-const MobileCarouselCard = memo(({ cat, imgSrc, index }) => {
+const MobileCarouselCard = memo(({ cat, coverPhoto, index }) => {
   const [loaded, setLoaded] = useState(false)
+
+  // Memoiza as fontes da imagem para evitar re-render desnecessário se o pai mudar
+  const imgSrc = useMemo(() => {
+    if (!coverPhoto?.url) return null
+    return getResponsiveImageSources(coverPhoto.url, {
+      widths: [320, 480],
+      qualities: [70, 75],
+      fallbackWidth: 480,
+      fallbackQuality: 75,
+    })
+  }, [coverPhoto?.url])
 
   return (
     <Link
@@ -482,26 +493,14 @@ export default function Home() {
                     msOverflowStyle: 'none',
                   }}
                 >
-                  {categoriesWithPhotos.slice(0, 7).map((cat, i) => {
-                    const coverPhoto = photos[cat.id]?.[0]
-                    const imgSrc = coverPhoto?.url
-                      ? getResponsiveImageSources(coverPhoto.url, {
-                      widths: [320, 480],
-                      qualities: [70, 75],
-                      fallbackWidth: 480,
-                      fallbackQuality: 75,
-                    })
-                      : null
-
-                    return (
-                      <MobileCarouselCard
-                        key={cat.id}
-                        cat={cat}
-                        imgSrc={imgSrc}
-                        index={i}
-                      />
-                    )
-                  })}
+                  {categoriesWithPhotos.slice(0, 7).map((cat, i) => (
+                    <MobileCarouselCard
+                      key={cat.id}
+                      cat={cat}
+                      coverPhoto={photos[cat.id]?.[0]}
+                      index={i}
+                    />
+                  ))}
 
                   <Link
                     to="/trabalhos"
