@@ -55,12 +55,12 @@ function FullscreenViewer({
 
   if (!photo) return null
 
-  const image = getResponsiveImageSources(photo.url, {
+  const image = useMemo(() => getResponsiveImageSources(photo.url, {
     widths: [1024, 1600, 2048],
     qualities: [72, 75, 80],
     fallbackWidth: 2048,
     fallbackQuality: 80,
-  })
+  }), [photo.url])
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center">
@@ -139,6 +139,11 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
   })
 
   const lastTrackedViewRef = useRef('')
+  const photosRef = useRef(photos)
+
+  useEffect(() => {
+    photosRef.current = photos
+  }, [photos])
 
   useEffect(() => {
     try {
@@ -157,27 +162,30 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
     }
   }, [likesKey])
 
+  // Reseta o estado de carregamento apenas quando muda a categoria
   useEffect(() => {
-    const visibleIds = new Set(photos.slice(0, visible).map((photo) => String(photo.id)))
-    setLoadedIds((prev) => {
-      const next = new Set()
-      prev.forEach((id) => {
-        if (visibleIds.has(String(id))) next.add(String(id))
-      })
-      return next
-    })
-  }, [visible, photos])
+    setLoadedIds(new Set())
+  }, [categoryId])
 
   const visiblePhotos = useMemo(() => photos.slice(0, visible), [photos, visible])
   const visibleIds = useMemo(
     () => visiblePhotos.map((photo) => String(photo.id)),
     [visiblePhotos]
   )
-  const allVisibleLoaded =
-    visibleIds.length === 0 || visibleIds.every((photoId) => loadedIds.has(photoId))
+  const allVisibleLoaded = useMemo(
+    () => visibleIds.length === 0 || visibleIds.every((photoId) => loadedIds.has(photoId)),
+    [visibleIds, loadedIds]
+  )
 
-  const leftCol = visiblePhotos.filter((_, itemIndex) => itemIndex % 2 === 0)
-  const rightCol = visiblePhotos.filter((_, itemIndex) => itemIndex % 2 !== 0)
+  const { leftCol, rightCol } = useMemo(() => {
+    const left = []
+    const right = []
+    visiblePhotos.forEach((photo, idx) => {
+      if (idx % 2 === 0) left.push(photo)
+      else right.push(photo)
+    })
+    return { leftCol: left, rightCol: right }
+  }, [visiblePhotos])
 
   const trackView = useCallback((photoId) => {
     if (!photoId || !categoryId) return
@@ -197,11 +205,11 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
   }, [open, index, photos, trackView])
 
   const handleOpen = useCallback((photo) => {
-    const nextIndex = photos.findIndex((item) => item.id === photo.id)
+    const nextIndex = photosRef.current.findIndex((item) => item.id === photo.id)
     if (nextIndex < 0) return
     setIndex(nextIndex)
     setOpen(true)
-  }, [photos])
+  }, [])
 
   const handleLoadComplete = useCallback((photoId) => {
     if (!photoId) return
