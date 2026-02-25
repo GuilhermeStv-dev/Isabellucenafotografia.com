@@ -85,8 +85,8 @@ export function GalleryProvider({ children }) {
           fotosPorCategoria[foto.categoria_slug] = [{
             id: String(foto.id),
             url: foto.url,
-            views: 0,
-            likes: 0,
+            views: Number(foto.views || 0),
+            likes: Number(foto.likes || 0),
           }]
           // Com RPC DISTINCT ON, a capa já está carregada mas o restante não
           // (não marca como "fully loaded" para permitir lazy load da galeria)
@@ -98,7 +98,7 @@ export function GalleryProvider({ children }) {
         // então buscamos poucas fotos e agrupamos no cliente
         const { data: fallbackData } = await supabase
           .from('fotos')
-          .select('id, categoria_slug, url')
+          .select('id, categoria_slug, url, views, likes')
           .eq('ativo', true)
           .in('categoria_slug', slugs)
           .order('created_at', { ascending: false })
@@ -112,8 +112,8 @@ export function GalleryProvider({ children }) {
             fotosPorCategoria[foto.categoria_slug] = [{
               id: String(foto.id),
               url: foto.url,
-              views: 0,
-              likes: 0,
+              views: Number(foto.views || 0),
+              likes: Number(foto.likes || 0),
             }]
           }
         }
@@ -140,7 +140,7 @@ export function GalleryProvider({ children }) {
     try {
       const { data, error } = await supabase
         .from('fotos')
-        .select('id, categoria_slug, url')
+        .select('id, categoria_slug, url, views, likes')
         .eq('ativo', true)
         .eq('categoria_slug', categoryId)
         .order('created_at', { ascending: false })
@@ -151,8 +151,8 @@ export function GalleryProvider({ children }) {
           [categoryId]: data.map((f) => ({
             id: String(f.id),
             url: f.url,
-            views: 0,
-            likes: 0,
+            views: Number(f.views || 0),
+            likes: Number(f.likes || 0),
           })),
         }))
         loadedRef.current.add(categoryId)
@@ -186,6 +186,64 @@ export function GalleryProvider({ children }) {
       return { ...p, [categoryId]: arr }
     })
 
+  const incrementPhotoViews = useCallback(async (categoryId, photoId) => {
+    if (!categoryId || !photoId) return
+
+    let nextViews = null
+    setPhotos((prev) => {
+      const list = prev[categoryId] || []
+      const updated = list.map((photo) => {
+        if (photo.id !== String(photoId)) return photo
+        const views = Number(photo.views || 0) + 1
+        nextViews = views
+        return { ...photo, views }
+      })
+      return { ...prev, [categoryId]: updated }
+    })
+
+    if (nextViews === null) return
+
+    try {
+      await supabase
+        .from('fotos')
+        .update({ views: nextViews })
+        .eq('id', photoId)
+        .eq('categoria_slug', categoryId)
+    } catch {
+      // noop: mantém UX local mesmo se persistência falhar
+    }
+  }, [])
+
+  const togglePhotoLike = useCallback(async (categoryId, photoId, liked) => {
+    if (!categoryId || !photoId) return
+
+    let nextLikes = null
+    const delta = liked ? 1 : -1
+
+    setPhotos((prev) => {
+      const list = prev[categoryId] || []
+      const updated = list.map((photo) => {
+        if (photo.id !== String(photoId)) return photo
+        const likes = Math.max(0, Number(photo.likes || 0) + delta)
+        nextLikes = likes
+        return { ...photo, likes }
+      })
+      return { ...prev, [categoryId]: updated }
+    })
+
+    if (nextLikes === null) return
+
+    try {
+      await supabase
+        .from('fotos')
+        .update({ likes: nextLikes })
+        .eq('id', photoId)
+        .eq('categoria_slug', categoryId)
+    } catch {
+      // noop: mantém UX local mesmo se persistência falhar
+    }
+  }, [])
+
   // allPhotos memoizado — não recalcula em todo render
   const allPhotos = useMemo(
     () => Object.entries(photos).flatMap(([catId, arr]) =>
@@ -198,9 +256,10 @@ export function GalleryProvider({ children }) {
     categories, photos, allPhotos, loadingPhotosByCategory,
     addCategory, removeCategory, updateCategory,
     addPhoto, removePhoto, reorderPhotos, setCoverPhoto,
+    incrementPhotoViews, togglePhotoLike,
     ensureCategoryPhotosLoaded,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [categories, photos, loadingPhotosByCategory, ensureCategoryPhotosLoaded])
+  }), [categories, photos, allPhotos, loadingPhotosByCategory, ensureCategoryPhotosLoaded, incrementPhotoViews, togglePhotoLike])
 
   return (
     <GalleryContext.Provider value={value}>

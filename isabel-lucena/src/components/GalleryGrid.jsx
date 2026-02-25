@@ -1,95 +1,258 @@
-import { lazy, Suspense, useState, useMemo, memo, useEffect, useRef } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { ChevronLeft, ChevronRight, Heart, Eye, X } from 'lucide-react'
 import PhotoCard from './PhotoCard'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
 
-const Lightbox = lazy(() => import('yet-another-react-lightbox'))
-
 const CHUNK = 9
 
-// RevealItem: animação via CSS + IntersectionObserver (sem Framer Motion)
-// Seguro em Safari iOS — cada observer é destruído após animar
-// revealed.current garante que a animação nunca se repete após o primeiro trigger
-const RevealItem = memo(({ children, delay = 0 }) => {
-  const ref = useRef(null)
-  const revealed = useRef(false)
+function GridSkeleton() {
+  const blocks = Array.from({ length: CHUNK })
 
-  useEffect(() => {
-    const el = ref.current
-    // ← Sai imediatamente se já foi revelado — impede reset de opacity
-    if (!el || revealed.current) return
-
-    el.style.opacity = '0'
-    el.style.transform = 'translateY(20px)'
-    el.style.transition = `opacity 0.45s ease ${delay}ms, transform 0.45s ease ${delay}ms`
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.style.opacity = '1'
-          el.style.transform = 'translateY(0)'
-          revealed.current = true   // ← Marca como revelado de forma permanente
-          observer.unobserve(el)
+  return (
+    <div className="grid grid-cols-2 gap-3 md:gap-4" aria-hidden="true">
+      {blocks.map((_, index) => (
+        <div key={index} className="relative overflow-hidden rounded-lg aspect-[3/4] bg-dark-surface">
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'linear-gradient(90deg, #1A1A1A 0%, #2E2E2E 50%, #1A1A1A 100%)',
+              backgroundSize: '200% 100%',
+              animation: 'shimmer 1.4s infinite linear',
+            }}
+          />
+        </div>
+      ))}
+      <style>{`
+        @keyframes shimmer {
+          0%   { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
         }
-      },
-      { threshold: 0.05, rootMargin: '0px 0px -40px 0px' }
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [delay])
+      `}</style>
+    </div>
+  )
+}
 
-  return <div ref={ref}>{children}</div>
-})
-RevealItem.displayName = 'RevealItem'
+function FullscreenViewer({
+  photo,
+  index,
+  total,
+  liked,
+  onClose,
+  onPrev,
+  onNext,
+  onToggleLike,
+}) {
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') onClose()
+      if (event.key === 'ArrowLeft') onPrev()
+      if (event.key === 'ArrowRight') onNext()
+    }
 
-export default function GalleryGrid({ photos }) {
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onClose, onPrev, onNext])
+
+  if (!photo) return null
+
+  const image = getResponsiveImageSources(photo.url, {
+    widths: [1024, 1600, 2048],
+    qualities: [72, 75, 80],
+    fallbackWidth: 2048,
+    fallbackQuality: 80,
+  })
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center">
+      <button
+        onClick={onClose}
+        className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/40 border border-white/20
+                   text-white/80 hover:text-white hover:border-white/50 transition-all flex items-center justify-center"
+        aria-label="Fechar visualização"
+      >
+        <X size={18} />
+      </button>
+
+      <button
+        onClick={onPrev}
+        className="absolute left-4 md:left-6 w-10 h-10 rounded-full bg-black/40 border border-white/20
+                   text-white/80 hover:text-white hover:border-white/50 transition-all flex items-center justify-center"
+        aria-label="Foto anterior"
+      >
+        <ChevronLeft size={18} />
+      </button>
+
+      <button
+        onClick={onNext}
+        className="absolute right-4 md:right-6 w-10 h-10 rounded-full bg-black/40 border border-white/20
+                   text-white/80 hover:text-white hover:border-white/50 transition-all flex items-center justify-center"
+        aria-label="Próxima foto"
+      >
+        <ChevronRight size={18} />
+      </button>
+
+      <img
+        src={image.src}
+        srcSet={image.srcSet}
+        sizes="100vw"
+        alt="Foto ampliada"
+        className="max-h-[85vh] max-w-[94vw] object-contain"
+        loading="eager"
+        decoding="async"
+        onError={(event) => {
+          if (image.fallbackSrc && event.currentTarget.src !== image.fallbackSrc) {
+            event.currentTarget.src = image.fallbackSrc
+            event.currentTarget.srcset = ''
+          }
+        }}
+      />
+
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/55 border border-white/15 rounded-full px-4 py-2
+                      flex items-center gap-4 text-xs text-white/80 backdrop-blur-sm">
+        <span>{index + 1} / {total}</span>
+        <span className="flex items-center gap-1"><Eye size={13} /> {photo.views || 0}</span>
+        <button
+          onClick={onToggleLike}
+          className={`flex items-center gap-1 transition-colors ${liked ? 'text-gold' : 'text-white/80 hover:text-white'}`}
+          aria-label={liked ? 'Descurtir foto' : 'Curtir foto'}
+        >
+          <Heart size={13} fill={liked ? 'currentColor' : 'none'} /> {photo.likes || 0}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+export default function GalleryGrid({ photos, categoryId, onRegisterView, onToggleLike }) {
   const [open, setOpen] = useState(false)
   const [index, setIndex] = useState(0)
   const [visible, setVisible] = useState(CHUNK)
+  const [loadedIds, setLoadedIds] = useState(() => new Set())
 
-  const slides = useMemo(
-    () => photos.map((photo) => ({
-      src: getResponsiveImageSources(photo.url, {
-        widths: [1024, 1600, 2048],
-        qualities: [72, 75, 80],
-        fallbackWidth: 2048,
-        fallbackQuality: 80,
-      }).src,
-    })),
-    [photos]
-  )
+  const likesKey = `il_liked_photos_${categoryId || 'global'}`
+  const [likedByUser, setLikedByUser] = useState(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(likesKey) || '[]'))
+    } catch {
+      return new Set()
+    }
+  })
 
-  const visiblePhotos = photos.slice(0, visible)
-  const leftCol = visiblePhotos.filter((_, i) => i % 2 === 0)
-  const rightCol = visiblePhotos.filter((_, i) => i % 2 !== 0)
+  const lastTrackedViewRef = useRef('')
 
-  const handleClick = (photo) => {
-    setIndex(photos.indexOf(photo))
+  useEffect(() => {
+    try {
+      localStorage.setItem(likesKey, JSON.stringify(Array.from(likedByUser)))
+    } catch {
+      // noop
+    }
+  }, [likedByUser, likesKey])
+
+  useEffect(() => {
+    setLoadedIds(new Set())
+  }, [visible, photos])
+
+  const visiblePhotos = useMemo(() => photos.slice(0, visible), [photos, visible])
+  const expectedLoaded = visiblePhotos.length
+  const allVisibleLoaded = expectedLoaded === 0 || loadedIds.size >= expectedLoaded
+
+  const leftCol = visiblePhotos.filter((_, itemIndex) => itemIndex % 2 === 0)
+  const rightCol = visiblePhotos.filter((_, itemIndex) => itemIndex % 2 !== 0)
+
+  const trackView = useCallback((photoId) => {
+    if (!photoId || !categoryId) return
+    onRegisterView?.(categoryId, photoId)
+  }, [categoryId, onRegisterView])
+
+  useEffect(() => {
+    if (!open) return
+    const current = photos[index]
+    if (!current?.id) return
+
+    const marker = `${current.id}:${index}`
+    if (lastTrackedViewRef.current === marker) return
+    lastTrackedViewRef.current = marker
+
+    trackView(current.id)
+  }, [open, index, photos, trackView])
+
+  const handleOpen = useCallback((photo) => {
+    const nextIndex = photos.findIndex((item) => item.id === photo.id)
+    if (nextIndex < 0) return
+    setIndex(nextIndex)
     setOpen(true)
-  }
+  }, [photos])
+
+  const handleLoadComplete = useCallback((photoId) => {
+    if (!photoId) return
+    setLoadedIds((prev) => {
+      if (prev.has(photoId)) return prev
+      const next = new Set(prev)
+      next.add(photoId)
+      return next
+    })
+  }, [])
+
+  const handlePrev = useCallback(() => {
+    setIndex((current) => (current - 1 + photos.length) % photos.length)
+  }, [photos.length])
+
+  const handleNext = useCallback(() => {
+    setIndex((current) => (current + 1) % photos.length)
+  }, [photos.length])
+
+  const currentPhoto = photos[index]
+  const currentLiked = currentPhoto ? likedByUser.has(String(currentPhoto.id)) : false
+
+  const handleToggleLike = useCallback(() => {
+    if (!currentPhoto?.id || !categoryId) return
+
+    const photoId = String(currentPhoto.id)
+    const willLike = !likedByUser.has(photoId)
+
+    setLikedByUser((prev) => {
+      const next = new Set(prev)
+      if (willLike) next.add(photoId)
+      else next.delete(photoId)
+      return next
+    })
+
+    onToggleLike?.(categoryId, photoId, willLike)
+  }, [currentPhoto, categoryId, likedByUser, onToggleLike])
 
   return (
     <div>
-      <div className="grid grid-cols-2 gap-3 md:gap-4">
-        <div className="flex flex-col gap-3 md:gap-4">
-          {leftCol.map((photo, i) => (
-            <RevealItem key={photo.id} delay={i * 50}>
-              <PhotoCard photo={photo} onClick={handleClick} />
-            </RevealItem>
-          ))}
-        </div>
-        <div className="flex flex-col gap-3 md:gap-4">
-          {rightCol.map((photo, i) => (
-            <RevealItem key={photo.id} delay={i * 50 + 80}>
-              <PhotoCard photo={photo} onClick={handleClick} />
-            </RevealItem>
-          ))}
+      {!allVisibleLoaded && <GridSkeleton />}
+
+      <div style={{ opacity: allVisibleLoaded ? 1 : 0, transition: 'opacity 0.35s ease' }}>
+        <div className="grid grid-cols-2 gap-3 md:gap-4">
+          <div className="flex flex-col gap-3 md:gap-4">
+            {leftCol.map((photo) => (
+              <PhotoCard
+                key={photo.id}
+                photo={photo}
+                onClick={handleOpen}
+                onLoadComplete={handleLoadComplete}
+              />
+            ))}
+          </div>
+          <div className="flex flex-col gap-3 md:gap-4">
+            {rightCol.map((photo) => (
+              <PhotoCard
+                key={photo.id}
+                photo={photo}
+                onClick={handleOpen}
+                onLoadComplete={handleLoadComplete}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
       {visible < photos.length && (
         <div className="flex justify-center mt-12">
           <button
-            onClick={() => setVisible((v) => v + CHUNK)}
+            onClick={() => setVisible((value) => value + CHUNK)}
             className="btn-outline px-8 py-3 text-sm"
           >
             Carregar mais ({photos.length - visible} restantes)
@@ -98,15 +261,16 @@ export default function GalleryGrid({ photos }) {
       )}
 
       {open && (
-        <Suspense fallback={null}>
-          <Lightbox
-            open={open}
-            close={() => setOpen(false)}
-            index={index}
-            slides={slides}
-            styles={{ container: { backgroundColor: 'rgba(0,0,0,0.95)' } }}
-          />
-        </Suspense>
+        <FullscreenViewer
+          photo={currentPhoto}
+          index={index}
+          total={photos.length}
+          liked={currentLiked}
+          onClose={() => setOpen(false)}
+          onPrev={handlePrev}
+          onNext={handleNext}
+          onToggleLike={handleToggleLike}
+        />
       )}
     </div>
   )

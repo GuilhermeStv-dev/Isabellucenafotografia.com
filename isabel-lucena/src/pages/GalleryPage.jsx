@@ -7,7 +7,14 @@ import { getResponsiveImageSources } from '../lib/imageOptimization'
 
 export default function GalleryPage() {
   const { categoryId } = useParams()
-  const { categories, photos, ensureCategoryPhotosLoaded, loadingPhotosByCategory } = useGallery()
+  const {
+    categories,
+    photos,
+    ensureCategoryPhotosLoaded,
+    loadingPhotosByCategory,
+    incrementPhotoViews,
+    togglePhotoLike,
+  } = useGallery()
   const heroTextRef = useRef(null)
 
   const category = categories.find(c => c.id === categoryId)
@@ -98,7 +105,12 @@ export default function GalleryPage() {
         </div>
 
         {categoryPhotos.length > 0 ? (
-          <GalleryGrid photos={categoryPhotos} />
+          <GalleryGrid
+            photos={categoryPhotos}
+            categoryId={categoryId}
+            onRegisterView={incrementPhotoViews}
+            onToggleLike={togglePhotoLike}
+          />
         ) : loadingCategory ? (
           <div className="text-center py-24 text-white/40">
             <p>Carregando fotos...</p>

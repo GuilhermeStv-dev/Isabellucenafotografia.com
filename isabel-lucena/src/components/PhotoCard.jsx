@@ -1,9 +1,10 @@
-import { useState, useMemo, memo } from 'react'
+import { useState, useMemo, memo, useRef, useEffect } from 'react'
 import { Eye, Heart, MessageCircle } from 'lucide-react'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
 
-function PhotoCard({ photo, onClick }) {
+function PhotoCard({ photo, onClick, onLoadComplete }) {
   const [loaded, setLoaded] = useState(false)
+  const notifiedRef = useRef(false)
 
   // Memoiza a transformação da URL — evita recalcular em cada render
   const image = useMemo(
@@ -15,6 +16,21 @@ function PhotoCard({ photo, onClick }) {
     }),
     [photo.url]
   )
+
+  useEffect(() => {
+    if (!photo?.url && !notifiedRef.current) {
+      notifiedRef.current = true
+      onLoadComplete?.(photo?.id)
+    }
+  }, [photo?.id, photo?.url, onLoadComplete])
+
+  const completeLoad = () => {
+    setLoaded(true)
+    if (!notifiedRef.current) {
+      notifiedRef.current = true
+      onLoadComplete?.(photo.id)
+    }
+  }
 
   return (
     <div
@@ -30,14 +46,15 @@ function PhotoCard({ photo, onClick }) {
           loading="lazy"
           fetchPriority="low"
           decoding="async"
-          onLoad={() => setLoaded(true)}
+          onLoad={completeLoad}
           onError={(e) => {
             if (image.fallbackSrc && e.currentTarget.src !== image.fallbackSrc) {
               e.currentTarget.src = image.fallbackSrc
               e.currentTarget.srcset = ''
+              completeLoad()
               return
             }
-            setLoaded(true)
+            completeLoad()
           }}
           className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105
             ${loaded ? 'opacity-100' : 'opacity-0'}`}
@@ -72,5 +89,6 @@ function PhotoCard({ photo, onClick }) {
 export default memo(PhotoCard, (prev, next) =>
   prev.photo.id === next.photo.id &&
   prev.photo.url === next.photo.url &&
-  prev.onClick === next.onClick
+  prev.onClick === next.onClick &&
+  prev.onLoadComplete === next.onLoadComplete
 )
