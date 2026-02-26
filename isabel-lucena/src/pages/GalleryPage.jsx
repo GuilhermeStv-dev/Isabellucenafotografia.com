@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Eye, Heart } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
 import GalleryGrid from '../components/GalleryGrid'
+import BlurImage from '../components/BlurImage'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
 
 export default function GalleryPage() {
@@ -26,7 +27,6 @@ export default function GalleryPage() {
     ensureCategoryPhotosLoaded(categoryId, { force: true })
   }, [categoryId, ensureCategoryPhotosLoaded])
 
-  // CSS reveal no título — sem Framer Motion
   useEffect(() => {
     const el = heroTextRef.current
     if (!el) return
@@ -54,35 +54,45 @@ export default function GalleryPage() {
     )
   }
 
-  const heroBg = categoryPhotos[0]?.url
-  const heroImage = heroBg ? getResponsiveImageSources(heroBg) : null
+  const heroCoverPhoto = categoryPhotos[0]
+  const heroImage = heroCoverPhoto?.url
+    ? getResponsiveImageSources(heroCoverPhoto.url, {
+        widths: [1024, 1600, 2048],
+        qualities: [72, 75, 80],
+        fallbackWidth: 2048,
+        fallbackQuality: 80,
+      })
+    : null
 
   const totalViews = categoryPhotos.reduce((s, p) => s + (p.views || 0), 0)
   const totalLikes = categoryPhotos.reduce((s, p) => s + (p.likes || 0), 0)
 
   return (
     <div className="bg-dark min-h-screen">
-      {/* ── Hero ── */}
       <section className="relative h-[45vh] md:h-[55vh] flex items-end overflow-hidden">
-        {heroImage && (
-          <img
-            src={heroImage.src}
-            srcSet={heroImage.srcSet}
-            sizes="100vw"
-            alt={category.label}
-            className="absolute inset-0 w-full h-full object-cover opacity-50"
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            onError={(event) => {
-              if (heroImage.fallbackSrc && event.currentTarget.src !== heroImage.fallbackSrc) {
-                event.currentTarget.src = heroImage.fallbackSrc
-                event.currentTarget.srcset = ''
-              }
-            }}
-          />
+        {heroImage ? (
+          <div className="absolute inset-0">
+            <BlurImage
+              src={heroImage.src}
+              srcSet={heroImage.srcSet}
+              sizes="100vw"
+              alt={category.label}
+              placeholder={heroCoverPhoto?.placeholder}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
+              className="w-full h-full object-cover opacity-50"
+              onError={(event) => {
+                if (heroImage.fallbackSrc && event.currentTarget.src !== heroImage.fallbackSrc) {
+                  event.currentTarget.src = heroImage.fallbackSrc
+                  event.currentTarget.srcset = ''
+                }
+              }}
+            />
+          </div>
+        ) : (
+          <div className="absolute inset-0 bg-dark-200" />
         )}
-        {!heroImage && <div className="absolute inset-0 bg-dark-200" />}
         <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/50 to-transparent" />
         <div className="relative z-10 max-w-7xl mx-auto px-6 pb-10 w-full">
           <div ref={heroTextRef}>
@@ -99,7 +109,6 @@ export default function GalleryPage() {
         </div>
       </section>
 
-      {/* ── Gallery ── */}
       <section className="py-12 max-w-7xl mx-auto px-6">
         <div className="mb-8">
           <Link

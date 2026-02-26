@@ -2,18 +2,16 @@ import { useEffect, useRef, useState, useMemo, memo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
+import BlurImage from '../components/BlurImage'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
 import FotoIsabel from '../assets/foto-isabel.webp'
 import FotoIsabel2 from '../assets/Foto-isabel-2.webp'
 import FotoIsabel3 from '../assets/Foto-isabel3.webp'
-import FotoIsabel4 from '../assets/Foto-Isabel4.webp'
 
 /* ═══════════════════════════════════════════════════
    HOOKS
 ═══════════════════════════════════════════════════ */
 
-// useReveal: só para elementos ESTÁTICOS que existem no DOM no mount
-// NÃO usar em componentes que dependem de dados assíncronos
 function useReveal(ref) {
   useEffect(() => {
     const elements = ref?.current
@@ -45,12 +43,10 @@ const revealStyle = (delay = 0) => ({
 })
 
 /* ═══════════════════════════════════════════════════
-   SUB-COMPONENTES
+   DESKTOP CATEGORY CARD
 ═══════════════════════════════════════════════════ */
 
 const CategoryCard = memo(({ cat, coverPhoto, index, layout, onLoad }) => {
-  const [loaded, setLoaded] = useState(false)
-
   const imgSrc = useMemo(() => {
     if (!coverPhoto?.url) return null
     return getResponsiveImageSources(coverPhoto.url, {
@@ -61,15 +57,11 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout, onLoad }) => {
     })
   }, [coverPhoto?.url])
 
-  const handleLoad = () => {
-    setLoaded(true)
-    onLoad?.()
-  }
-
   // Se não tem foto, avisa o pai que esse slot está "pronto"
   useEffect(() => {
     if (!imgSrc) onLoad?.()
-  }, [imgSrc]) // eslint-disable-line
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imgSrc])
 
   const desktopClass = {
     tall: 'md:row-span-2',
@@ -80,14 +72,25 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout, onLoad }) => {
   return (
     <Link
       to={`/galeria/${cat.id}`}
-      className={`group relative overflow-hidden rounded-2xl bg-dark-200
-                  aspect-[3/4] ${desktopClass}`}
+      className={`group relative overflow-hidden rounded-2xl bg-dark-200 aspect-[3/4] ${desktopClass}`}
     >
-      {/* Skeleton — visível até imagem carregar */}
-      <div
-        style={{ opacity: loaded ? 0 : 1, transition: 'opacity 0.3s ease', pointerEvents: 'none' }}
-        className="absolute inset-0"
-      >
+      {imgSrc ? (
+        <BlurImage
+          src={imgSrc.src}
+          srcSet={imgSrc.srcSet}
+          sizes="(min-width: 768px) 30vw, 75vw"
+          alt={cat.label}
+          placeholder={coverPhoto?.placeholder}
+          loading={index < 2 ? 'eager' : 'lazy'}
+          decoding="async"
+          onLoad={onLoad}
+          onError={onLoad}
+          className="absolute inset-0 w-full h-full object-cover
+                     transition-transform duration-700 ease-out
+                     group-hover:scale-105 will-change-transform"
+        />
+      ) : (
+        /* Skeleton quando sem foto */
         <div
           className="absolute inset-0"
           style={{
@@ -96,75 +99,63 @@ const CategoryCard = memo(({ cat, coverPhoto, index, layout, onLoad }) => {
             animation: 'shimmer 1.4s infinite linear',
           }}
         />
-        <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col gap-2">
-          <div className="h-2 w-16 rounded-full bg-white/10" />
-          <div className="h-4 w-28 rounded-full bg-white/15" />
-        </div>
-        <style>{`
-          @keyframes shimmer {
-            0%   { background-position: 200% 0 }
-            100% { background-position: -200% 0 }
-          }
-        `}</style>
+      )}
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+      <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5
+                      translate-y-0 group-hover:-translate-y-1 transition-transform duration-300">
+        <span className="inline-block font-body text-[9px] tracking-[0.25em] uppercase
+                         text-gold/90 border border-gold/30 rounded-full
+                         px-2.5 py-1 mb-2 bg-black/30 backdrop-blur-sm">
+          {cat.tag}
+        </span>
+        <h3 className="font-display text-lg md:text-xl italic text-white leading-tight">
+          {cat.label}
+        </h3>
+      </div>
+      <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full
+                      border border-white/20 bg-black/20 backdrop-blur-sm
+                      flex items-center justify-center
+                      opacity-0 group-hover:opacity-100
+                      translate-y-1 group-hover:translate-y-0
+                      transition-all duration-300">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+          <path d="M2 10L10 2M10 2H4M10 2v6"
+            stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </div>
 
-      {/* Conteúdo real — aparece quando imagem carrega */}
-      <div
-        style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
-        className="absolute inset-0"
-      >
-        {imgSrc && (
-          <img
-            src={imgSrc.src}
-            srcSet={imgSrc.srcSet}
-            sizes="(min-width: 768px) 30vw, 75vw"
-            alt={cat.label}
-            loading={index < 2 ? 'eager' : 'lazy'}
-            decoding="async"
-            onLoad={handleLoad}
-            onError={handleLoad}
-            className="absolute inset-0 w-full h-full object-cover
-                       transition-transform duration-700 ease-out
-                       group-hover:scale-105 will-change-transform"
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
-        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5
-                        translate-y-0 group-hover:-translate-y-1 transition-transform duration-300">
-          <span className="inline-block font-body text-[9px] tracking-[0.25em] uppercase
-                           text-gold/90 border border-gold/30 rounded-full
-                           px-2.5 py-1 mb-2 bg-black/30 backdrop-blur-sm">
-            {cat.tag}
-          </span>
-          <h3 className="font-display text-lg md:text-xl italic text-white leading-tight">
-            {cat.label}
-          </h3>
-        </div>
-        <div className="absolute top-3.5 right-3.5 w-8 h-8 rounded-full
-                        border border-white/20 bg-black/20 backdrop-blur-sm
-                        flex items-center justify-center
-                        opacity-0 group-hover:opacity-100
-                        translate-y-1 group-hover:translate-y-0
-                        transition-all duration-300">
-          <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-            <path d="M2 10L10 2M10 2H4M10 2v6"
-              stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
-      </div>
+      <style>{`
+        @keyframes shimmer {
+          0%   { background-position: 200% 0 }
+          100% { background-position: -200% 0 }
+        }
+      `}</style>
     </Link>
   )
 }, (prev, next) =>
   prev.coverPhoto?.url === next.coverPhoto?.url &&
+  prev.coverPhoto?.placeholder === next.coverPhoto?.placeholder &&
   prev.cat.id === next.cat.id &&
   prev.onLoad === next.onLoad
 )
-
 CategoryCard.displayName = 'CategoryCard'
 
-const MobileCarouselCard = memo(({ cat, imgSrc, index }) => {
-  const [loaded, setLoaded] = useState(false)
+/* ═══════════════════════════════════════════════════
+   MOBILE CAROUSEL CARD
+═══════════════════════════════════════════════════ */
+
+const MobileCarouselCard = memo(({ cat, coverPhoto, index }) => {
+  const imgSrc = useMemo(() => {
+    if (!coverPhoto?.url) return null
+    return getResponsiveImageSources(coverPhoto.url, {
+      widths: [320, 480],
+      qualities: [70, 75],
+      fallbackWidth: 480,
+      fallbackQuality: 75,
+    })
+  }, [coverPhoto?.url])
 
   return (
     <Link
@@ -177,11 +168,19 @@ const MobileCarouselCard = memo(({ cat, imgSrc, index }) => {
         aspectRatio: '3/4',
       }}
     >
-      {/* Skeleton — some quando imagem carrega */}
-      <div
-        style={{ opacity: loaded ? 0 : 1, transition: 'opacity 0.3s ease', pointerEvents: 'none' }}
-        className="absolute inset-0"
-      >
+      {imgSrc ? (
+        <BlurImage
+          src={imgSrc.src}
+          srcSet={imgSrc.srcSet}
+          sizes="75vw"
+          alt={cat.label}
+          placeholder={coverPhoto?.placeholder}
+          loading="eager"
+          decoding="async"
+          className="absolute inset-0 w-full h-full object-cover
+                     transition-transform duration-500 group-active:scale-105"
+        />
+      ) : (
         <div
           className="absolute inset-0"
           style={{
@@ -190,44 +189,27 @@ const MobileCarouselCard = memo(({ cat, imgSrc, index }) => {
             animation: 'shimmer 1.4s infinite linear',
           }}
         />
-        <div className="absolute bottom-0 left-0 right-0 p-4 flex flex-col gap-2">
-          <div className="h-2 w-16 rounded-full bg-white/10" />
-          <div className="h-4 w-28 rounded-full bg-white/15" />
-        </div>
+      )}
+
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
+      <div className="absolute bottom-0 left-0 right-0 p-4">
+        <span className="inline-block font-body text-[9px] tracking-[0.2em] uppercase
+                         text-gold border border-gold/30 rounded-full px-2 py-0.5 mb-2
+                         bg-black/30 backdrop-blur-sm">
+          {cat.tag}
+        </span>
+        <h3 className="font-display text-lg italic text-white">{cat.label}</h3>
+      </div>
+      <div className="absolute top-3.5 left-3.5 font-body text-[10px] text-white/40 tracking-wider">
+        {String(index + 1).padStart(2, '0')}
       </div>
 
-      {/* Conteúdo real — aparece completo só quando imagem carrega */}
-      <div
-        style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.3s ease' }}
-        className="absolute inset-0"
-      >
-        {imgSrc && (
-          <img
-            src={imgSrc.src}
-            srcSet={imgSrc.srcSet}
-            sizes="75vw"
-            alt={cat.label}
-            loading="eager"
-            decoding="async"
-            onLoad={() => setLoaded(true)}
-            onError={() => setLoaded(true)}
-            className="absolute inset-0 w-full h-full object-cover
-                       transition-transform duration-500 group-active:scale-105"
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 p-4">
-          <span className="inline-block font-body text-[9px] tracking-[0.2em] uppercase
-                           text-gold border border-gold/30 rounded-full px-2 py-0.5 mb-2
-                           bg-black/30 backdrop-blur-sm">
-            {cat.tag}
-          </span>
-          <h3 className="font-display text-lg italic text-white">{cat.label}</h3>
-        </div>
-        <div className="absolute top-3.5 left-3.5 font-body text-[10px] text-white/40 tracking-wider">
-          {String(index + 1).padStart(2, '0')}
-        </div>
-      </div>
+      <style>{`
+        @keyframes shimmer {
+          0%   { background-position: 200% 0 }
+          100% { background-position: -200% 0 }
+        }
+      `}</style>
     </Link>
   )
 })
@@ -255,8 +237,6 @@ const DEPOIMENTOS = [
    HOME
 ═══════════════════════════════════════════════════ */
 export default function Home() {
-  // useReveal() APENAS para seções estáticas (hero, sobre, depoimentos, cta)
-  // que já estão no DOM no mount — NÃO para CategoryCards async
   useReveal()
   const { categories, photos } = useGallery()
   const carouselRef = useRef(null)
@@ -307,7 +287,7 @@ export default function Home() {
     <main>
 
       {/* ─────────────────────────────────────────────────────
-          1 · HERO  (data-reveal: estático, OK)
+          1 · HERO
       ───────────────────────────────────────────────────── */}
       <section className="relative min-h-[100svh] flex flex-col justify-end pb-12 overflow-hidden
                           md:flex-row md:items-center md:justify-start md:pb-0">
@@ -419,8 +399,7 @@ export default function Home() {
 
 
       {/* ─────────────────────────────────────────────────────
-          2 · TRABALHOS
-          CategoryCard tem reveal próprio — não usa data-reveal
+          2 · TRABALHOS — CategoryCard com BlurImage
       ───────────────────────────────────────────────────── */}
       <section id="trabalhos-home" className="py-14 md:py-24 bg-dark overflow-hidden">
         <div className="max-w-6xl mx-auto">
@@ -461,7 +440,7 @@ export default function Home() {
             </Link>
           </div>
 
-          {categoriesWithPhotos.length === 0 ? null : (
+          {categoriesWithPhotos.length > 0 && (
             <>
               {/* ── MOBILE: Carrossel ── */}
               <div className="md:hidden relative">
@@ -478,26 +457,14 @@ export default function Home() {
                     msOverflowStyle: 'none',
                   }}
                 >
-                  {categoriesWithPhotos.slice(0, 7).map((cat, i) => {
-                    const coverPhoto = photos[cat.id]?.[0]
-                    const imgSrc = coverPhoto?.url
-                      ? getResponsiveImageSources(coverPhoto.url, {
-                      widths: [320, 480],
-                      qualities: [70, 75],
-                      fallbackWidth: 480,
-                      fallbackQuality: 75,
-                    })
-                      : null
-
-                    return (
-                      <MobileCarouselCard
-                        key={cat.id}
-                        cat={cat}
-                        imgSrc={imgSrc}
-                        index={i}
-                      />
-                    )
-                  })}
+                  {categoriesWithPhotos.slice(0, 7).map((cat, i) => (
+                    <MobileCarouselCard
+                      key={cat.id}
+                      cat={cat}
+                      coverPhoto={photos[cat.id]?.[0]}
+                      index={i}
+                    />
+                  ))}
 
                   <Link
                     to="/trabalhos"
@@ -540,8 +507,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* ── DESKTOP: Grid editorial ──
-                  CategoryCard agora tem reveal próprio, sem data-reveal no JSX */}
+              {/* ── DESKTOP: Grid editorial ── */}
               <div className="hidden md:block px-8">
                 <div
                   ref={gridRef}
@@ -573,7 +539,7 @@ export default function Home() {
 
 
       {/* ─────────────────────────────────────────────────────
-          3 · SOBRE  (data-reveal: estático, OK)
+          3 · SOBRE
       ───────────────────────────────────────────────────── */}
       <section className="py-14 md:py-24 bg-dark-100 overflow-hidden">
         <div className="max-w-6xl mx-auto px-5 md:px-8">
@@ -654,7 +620,7 @@ export default function Home() {
 
 
       {/* ─────────────────────────────────────────────────────
-          4 · DEPOIMENTOS  (data-reveal: estático, OK)
+          4 · DEPOIMENTOS
       ───────────────────────────────────────────────────── */}
       <section className="py-14 md:py-24 bg-dark overflow-hidden">
         <div className="max-w-6xl mx-auto px-5 md:px-8">
@@ -716,7 +682,7 @@ export default function Home() {
 
 
       {/* ─────────────────────────────────────────────────────
-          5 · CTA FINAL  (data-reveal: estático, OK)
+          5 · CTA FINAL
       ───────────────────────────────────────────────────── */}
       <section className="py-14 md:py-24 bg-dark-100 overflow-hidden">
         <div className="max-w-6xl mx-auto px-5 md:px-8">

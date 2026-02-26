@@ -1,12 +1,12 @@
 import { useState, useMemo, memo, useRef, useEffect } from 'react'
 import { Eye, Heart, MessageCircle } from 'lucide-react'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
+import BlurImage from './BlurImage'
 
 function PhotoCard({ photo, onClick, onLoadComplete }) {
   const [loaded, setLoaded] = useState(false)
   const notifiedRef = useRef(false)
 
-  // Memoiza a transformação da URL — evita recalcular em cada render
   const image = useMemo(
     () => getResponsiveImageSources(photo.url, {
       widths: [480, 768, 1200],
@@ -37,39 +37,39 @@ function PhotoCard({ photo, onClick, onLoadComplete }) {
     }
   }
 
+  const handleError = (e) => {
+    if (image.fallbackSrc && e.currentTarget.src !== image.fallbackSrc) {
+      e.currentTarget.src = image.fallbackSrc
+      e.currentTarget.srcset = ''
+      completeLoad()
+      return
+    }
+    completeLoad()
+  }
+
   return (
     <div
-      className="relative overflow-hidden rounded-lg cursor-pointer group bg-dark-surface"
+      className="relative overflow-hidden rounded-lg cursor-pointer group bg-[#1A1A1A]"
       onClick={() => onClick?.(photo)}
     >
-      <div className="aspect-[3/4] overflow-hidden">
-        <img
+      <div className="relative aspect-[3/4] overflow-hidden">
+        <BlurImage
           src={image.src}
           srcSet={image.srcSet}
           sizes="(min-width: 1024px) 26vw, (min-width: 768px) 33vw, 50vw"
           alt=""
+          placeholder={photo.placeholder}
           loading="lazy"
           fetchPriority="low"
           decoding="async"
           onLoad={completeLoad}
-          onError={(e) => {
-            if (image.fallbackSrc && e.currentTarget.src !== image.fallbackSrc) {
-              e.currentTarget.src = image.fallbackSrc
-              e.currentTarget.srcset = ''
-              completeLoad()
-              return
-            }
-            completeLoad()
-          }}
-          className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105
-            ${loaded ? 'opacity-100' : 'opacity-0'}`}
+          onError={handleError}
+          className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-105 ${
+            loaded ? 'opacity-100' : 'opacity-0'
+          }`}
         />
-        {!loaded && (
-          <div className="absolute inset-0 bg-dark-surface animate-pulse" />
-        )}
       </div>
 
-      {/* Overlay hover — só renderiza quando tem dados */}
       {(photo.views > 0 || photo.likes > 0 || photo.comments > 0) && (
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent
                         opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
@@ -90,10 +90,10 @@ function PhotoCard({ photo, onClick, onLoadComplete }) {
   )
 }
 
-// memo: só re-renderiza se photo.id ou photo.url mudar
 export default memo(PhotoCard, (prev, next) =>
   prev.photo.id === next.photo.id &&
   prev.photo.url === next.photo.url &&
+  prev.photo.placeholder === next.photo.placeholder &&
   prev.photo.views === next.photo.views &&
   prev.photo.likes === next.photo.likes &&
   prev.photo.comments === next.photo.comments &&

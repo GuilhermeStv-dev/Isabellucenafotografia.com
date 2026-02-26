@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Heart, Eye, X } from 'lucide-react'
 import PhotoCard from './PhotoCard'
+import BlurImage from './BlurImage'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
 
 const CHUNK = 9
@@ -31,7 +32,6 @@ function FullscreenViewer({
       if (event.key === 'ArrowLeft') onPrev()
       if (event.key === 'ArrowRight') onNext()
     }
-
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [onClose, onPrev, onNext])
@@ -67,21 +67,40 @@ function FullscreenViewer({
         <ChevronRight size={18} />
       </button>
 
-      <img
-        src={image.src}
-        srcSet={image.srcSet}
-        sizes="100vw"
-        alt="Foto ampliada"
-        className="max-h-[85vh] max-w-[94vw] object-contain"
-        loading="eager"
-        decoding="async"
-        onError={(event) => {
-          if (image.fallbackSrc && event.currentTarget.src !== image.fallbackSrc) {
-            event.currentTarget.src = image.fallbackSrc
-            event.currentTarget.srcset = ''
-          }
-        }}
-      />
+      <div
+        className="relative flex items-center justify-center overflow-hidden"
+        style={{ maxHeight: '85vh', maxWidth: '94vw' }}
+      >
+        {photo.placeholder && (
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `url("${photo.placeholder}")`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(30px)',
+              transform: 'scale(1.1)',
+            }}
+          />
+        )}
+
+        <BlurImage
+          src={image.src}
+          srcSet={image.srcSet}
+          sizes="100vw"
+          alt="Foto ampliada"
+          placeholder={photo.placeholder}
+          loading="eager"
+          decoding="async"
+          onError={(e) => {
+            if (image.fallbackSrc && e.currentTarget.src !== image.fallbackSrc) {
+              e.currentTarget.src = image.fallbackSrc
+              e.currentTarget.srcset = ''
+            }
+          }}
+          className="relative z-10 max-h-[85vh] max-w-[94vw] object-contain"
+        />
+      </div>
 
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/55 border border-white/15 rounded-full px-4 py-2
                       flex items-center gap-4 text-xs text-white/80 backdrop-blur-sm">
@@ -116,16 +135,12 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
   const lastTrackedViewRef = useRef('')
   const photosRef = useRef(photos)
 
-  useEffect(() => {
-    photosRef.current = photos
-  }, [photos])
+  useEffect(() => { photosRef.current = photos }, [photos])
 
   useEffect(() => {
     try {
       localStorage.setItem(likesKey, JSON.stringify(Array.from(likedByUser)))
-    } catch {
-      // noop
-    }
+    } catch { /* noop */ }
   }, [likedByUser, likesKey])
 
   useEffect(() => {
@@ -158,11 +173,9 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
     if (!open) return
     const current = photos[index]
     if (!current?.id) return
-
     const marker = `${current.id}:${index}`
     if (lastTrackedViewRef.current === marker) return
     lastTrackedViewRef.current = marker
-
     trackView(current.id)
   }, [open, index, photos, trackView])
 
@@ -184,11 +197,7 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
   }, [photos.length])
 
   useEffect(() => {
-    if (photos.length === 0) {
-      setOpen(false)
-      setIndex(0)
-      return
-    }
+    if (photos.length === 0) { setOpen(false); setIndex(0); return }
     setIndex((current) => Math.min(current, photos.length - 1))
   }, [photos.length])
 
@@ -197,17 +206,14 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
 
   const handleToggleLike = useCallback(() => {
     if (!currentPhoto?.id || !categoryId) return
-
     const photoId = String(currentPhoto.id)
     const willLike = !likedByUser.has(photoId)
-
     setLikedByUser((prev) => {
       const next = new Set(prev)
       if (willLike) next.add(photoId)
       else next.delete(photoId)
       return next
     })
-
     onToggleLike?.(categoryId, photoId, willLike)
   }, [currentPhoto, categoryId, likedByUser, onToggleLike])
 
@@ -217,20 +223,12 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
         <div className="grid grid-cols-2 gap-3 md:gap-4">
           <div className="flex flex-col gap-3 md:gap-4">
             {leftCol.map((photo) => (
-              <PhotoCard
-                key={photo.id}
-                photo={photo}
-                onClick={handleOpen}
-              />
+              <PhotoCard key={photo.id} photo={photo} onClick={handleOpen} />
             ))}
           </div>
           <div className="flex flex-col gap-3 md:gap-4">
             {rightCol.map((photo) => (
-              <PhotoCard
-                key={photo.id}
-                photo={photo}
-                onClick={handleOpen}
-              />
+              <PhotoCard key={photo.id} photo={photo} onClick={handleOpen} />
             ))}
           </div>
         </div>
@@ -239,7 +237,7 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
       {visible < photos.length && (
         <div className="flex justify-center mt-12">
           <button
-            onClick={() => setVisible((value) => value + CHUNK)}
+            onClick={() => setVisible((v) => v + CHUNK)}
             className="btn-outline px-8 py-3 text-sm"
           >
             Carregar mais ({photos.length - visible} restantes)

@@ -30,17 +30,11 @@ const readLocalMetrics = () => {
   try {
     const parsed = JSON.parse(localStorage.getItem(LOCAL_METRICS_KEY) || '{}')
     return parsed && typeof parsed === 'object' ? parsed : {}
-  } catch {
-    return {}
-  }
+  } catch { return {} }
 }
 
 const writeLocalMetrics = (metrics) => {
-  try {
-    localStorage.setItem(LOCAL_METRICS_KEY, JSON.stringify(metrics))
-  } catch {
-    // noop
-  }
+  try { localStorage.setItem(LOCAL_METRICS_KEY, JSON.stringify(metrics)) } catch { /* noop */ }
 }
 
 const mergeMetricValue = (photoId, field, dbValue, localMetrics) => {
@@ -48,9 +42,19 @@ const mergeMetricValue = (photoId, field, dbValue, localMetrics) => {
   return Math.max(Number(dbValue || 0), local)
 }
 
+const mapFoto = (f, localMetrics) => ({
+  id: String(f.id),
+  url: f.url,
+  placeholder: f.placeholder || null,
+  views: mergeMetricValue(f.id, 'views', f.views, localMetrics),
+  likes: mergeMetricValue(f.id, 'likes', f.likes, localMetrics),
+})
+
+const FOTO_COLS = 'id, categoria_slug, url, placeholder, views, likes'
+
 export function GalleryProvider({ children }) {
-  const loadedRef = useRef(new Set())    // categorias com todas as fotos carregadas
-  const loadingRef = useRef({})          // guard de loading sem causar re-render
+  const loadedRef = useRef(new Set())
+  const loadingRef = useRef({})
 
   const [categories, setCategories] = useState(() => {
     try {
@@ -67,12 +71,10 @@ export function GalleryProvider({ children }) {
     localStorage.setItem('il_categories', JSON.stringify(categories))
   }, [categories])
 
-  // ── Sync inicial: categorias + 1 capa por categoria ──
   useEffect(() => {
     let ativo = true
 
     const sync = async () => {
-      // Query 1: categorias ativas
       const { data: cats, error: errCats } = await supabase
         .from('categorias')
         .select('nome, slug')
@@ -95,50 +97,30 @@ export function GalleryProvider({ children }) {
         return
       }
 
-      // ── Query 2: tenta usar RPC com DISTINCT ON (mais eficiente) ──
-      // Retorna exatamente 1 foto por categoria (a mais recente)
-      // Fallback para .in() se o RPC não existir ainda
       let fotosPorCategoria = { ...baseFotos }
 
       const { data: rpcData, error: rpcErr } = await supabase
         .rpc('get_category_covers', { category_slugs: slugs })
 
       if (!rpcErr && rpcData) {
-        // RPC disponível: cada row já é a foto mais recente da categoria
         for (const foto of rpcData) {
-          fotosPorCategoria[foto.categoria_slug] = [{
-            id: String(foto.id),
-            url: foto.url,
-            views: mergeMetricValue(foto.id, 'views', foto.views, localMetricsRef.current),
-            likes: mergeMetricValue(foto.id, 'likes', foto.likes, localMetricsRef.current),
-          }]
-          // Com RPC DISTINCT ON, a capa já está carregada mas o restante não
-          // (não marca como "fully loaded" para permitir lazy load da galeria)
+          fotosPorCategoria[foto.categoria_slug] = [mapFoto(foto, localMetricsRef.current)]
         }
       } else {
-        // Fallback: .in() buscando somente as colunas necessárias
-        // Limita a 7 fotos (1 por categoria) via order + limit por slug
-        // Nota: sem RPC não há como fazer DISTINCT ON via client SDK,
-        // então buscamos poucas fotos e agrupamos no cliente
         const { data: fallbackData } = await supabase
           .from('fotos')
-          .select('id, categoria_slug, url, views, likes')
+          .select(FOTO_COLS)
           .eq('ativo', true)
           .in('categoria_slug', slugs)
           .order('created_at', { ascending: false })
-          .limit(100) // amplia busca para cobrir melhor categorias com volume desigual
+          .limit(100)
 
         if (fallbackData) {
           const seen = new Set()
           for (const foto of fallbackData) {
             if (seen.has(foto.categoria_slug)) continue
             seen.add(foto.categoria_slug)
-            fotosPorCategoria[foto.categoria_slug] = [{
-              id: String(foto.id),
-              url: foto.url,
-              views: mergeMetricValue(foto.id, 'views', foto.views, localMetricsRef.current),
-              likes: mergeMetricValue(foto.id, 'likes', foto.likes, localMetricsRef.current),
-            }]
+            fotosPorCategoria[foto.categoria_slug] = [mapFoto(foto, localMetricsRef.current)]
           }
         }
       }
@@ -152,7 +134,6 @@ export function GalleryProvider({ children }) {
     return () => { ativo = false }
   }, [])
 
-  // ── Carregamento lazy — todas as fotos de uma categoria ──
   const ensureCategoryPhotosLoaded = useCallback(async (categoryId, options = {}) => {
     const { force = false } = options
     if (!categoryId) return
@@ -165,7 +146,7 @@ export function GalleryProvider({ children }) {
     try {
       const { data, error } = await supabase
         .from('fotos')
-        .select('id, categoria_slug, url, views, likes')
+        .select(FOTO_COLS)
         .eq('ativo', true)
         .eq('categoria_slug', categoryId)
         .order('created_at', { ascending: false })
@@ -173,12 +154,7 @@ export function GalleryProvider({ children }) {
       if (!error && data) {
         setPhotos((prev) => ({
           ...prev,
-          [categoryId]: data.map((f) => ({
-            id: String(f.id),
-            url: f.url,
-            views: mergeMetricValue(f.id, 'views', f.views, localMetricsRef.current),
-            likes: mergeMetricValue(f.id, 'likes', f.likes, localMetricsRef.current),
-          })),
+          [categoryId]: data.map((f) => mapFoto(f, localMetricsRef.current)),
         }))
         loadedRef.current.add(categoryId)
       }
@@ -186,9 +162,8 @@ export function GalleryProvider({ children }) {
       loadingRef.current[categoryId] = false
       setLoadingPhotosByCategory((prev) => ({ ...prev, [categoryId]: false }))
     }
-  }, []) // deps vazias — guards via refs
+  }, [])
 
-  // ── CRUD ──
   const addCategory = (cat) => setCategories((p) => [...p, cat])
   const removeCategory = (id) => {
     setCategories((p) => p.filter((c) => c.id !== id))
@@ -213,7 +188,6 @@ export function GalleryProvider({ children }) {
 
   const incrementPhotoViews = useCallback(async (categoryId, photoId) => {
     if (!categoryId || !photoId) return
-
     let nextViews = null
     setPhotos((prev) => {
       const list = prev[categoryId] || []
@@ -225,34 +199,21 @@ export function GalleryProvider({ children }) {
       })
       return { ...prev, [categoryId]: updated }
     })
-
     if (nextViews === null) return
-
     localMetricsRef.current = {
       ...localMetricsRef.current,
-      [String(photoId)]: {
-        ...(localMetricsRef.current[String(photoId)] || {}),
-        views: nextViews,
-      },
+      [String(photoId)]: { ...(localMetricsRef.current[String(photoId)] || {}), views: nextViews },
     }
     writeLocalMetrics(localMetricsRef.current)
-
     try {
-      await supabase
-        .from('fotos')
-        .update({ views: nextViews })
-        .eq('id', Number(photoId))
-    } catch {
-      // noop: mantém UX local mesmo se persistência falhar
-    }
+      await supabase.from('fotos').update({ views: nextViews }).eq('id', Number(photoId))
+    } catch { /* noop */ }
   }, [])
 
   const togglePhotoLike = useCallback(async (categoryId, photoId, liked) => {
     if (!categoryId || !photoId) return
-
     let nextLikes = null
     const delta = liked ? 1 : -1
-
     setPhotos((prev) => {
       const list = prev[categoryId] || []
       const updated = list.map((photo) => {
@@ -263,29 +224,17 @@ export function GalleryProvider({ children }) {
       })
       return { ...prev, [categoryId]: updated }
     })
-
     if (nextLikes === null) return
-
     localMetricsRef.current = {
       ...localMetricsRef.current,
-      [String(photoId)]: {
-        ...(localMetricsRef.current[String(photoId)] || {}),
-        likes: nextLikes,
-      },
+      [String(photoId)]: { ...(localMetricsRef.current[String(photoId)] || {}), likes: nextLikes },
     }
     writeLocalMetrics(localMetricsRef.current)
-
     try {
-      await supabase
-        .from('fotos')
-        .update({ likes: nextLikes })
-        .eq('id', Number(photoId))
-    } catch {
-      // noop: mantém UX local mesmo se persistência falhar
-    }
+      await supabase.from('fotos').update({ likes: nextLikes }).eq('id', Number(photoId))
+    } catch { /* noop */ }
   }, [])
 
-  // allPhotos memoizado — não recalcula em todo render
   const allPhotos = useMemo(
     () => Object.entries(photos).flatMap(([catId, arr]) =>
       arr.map((p) => ({ ...p, categoryId: catId }))
