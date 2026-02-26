@@ -46,40 +46,22 @@ const resolveCategorySlug = (rawSlug, availableSlugs) => {
 }
 
 const GalleryContext = createContext(null)
-const LOCAL_METRICS_KEY = 'il_photo_metrics'
-
-const readLocalMetrics = () => {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(LOCAL_METRICS_KEY) || '{}')
-    return parsed && typeof parsed === 'object' ? parsed : {}
-  } catch { return {} }
-}
-
-const writeLocalMetrics = (metrics) => {
-  try { localStorage.setItem(LOCAL_METRICS_KEY, JSON.stringify(metrics)) } catch { /* noop */ }
-}
-
-const mergeMetricValue = (photoId, field, dbValue, localMetrics) => {
-  const local = Number(localMetrics?.[String(photoId)]?.[field] || 0)
-  return Math.max(Number(dbValue || 0), local)
-}
 
 // Colunas reais da tabela fotos
 const FOTO_COLS = 'id, categoria_slug, url, titulo, placeholder, views, likes'
 
-const mapFoto = (f, localMetrics = {}) => ({
+const mapFoto = (f) => ({
   id: String(f.id),
   url: f.url,
   titulo: f.titulo || null,
   placeholder: f.placeholder || null,
-  views: mergeMetricValue(f.id, 'views', f.views, localMetrics),
-  likes: mergeMetricValue(f.id, 'likes', f.likes, localMetrics),
+  views: Number(f.views || 0),
+  likes: Number(f.likes || 0),
 })
 
 export function GalleryProvider({ children }) {
   const loadedRef = useRef(new Set())
   const loadingRef = useRef({})
-  const localMetricsRef = useRef(readLocalMetrics())
 
   const [categories, setCategories] = useState(() => {
     try {
@@ -132,10 +114,9 @@ export function GalleryProvider({ children }) {
         for (const foto of rpcData) {
           const targetSlug = resolveCategorySlug(foto.categoria_slug, availableSlugs)
           if (!targetSlug) continue
-          capasPorCategoria[targetSlug] = [mapFoto({ ...foto, categoria_slug: targetSlug }, localMetricsRef.current)]
+          capasPorCategoria[targetSlug] = [mapFoto({ ...foto, categoria_slug: targetSlug })]
         }
       } else {
-        // Fallback: busca todas e pega a primeira de cada categoria
         const { data: fallbackData } = await supabase
           .from('fotos')
           .select(FOTO_COLS)
@@ -148,7 +129,7 @@ export function GalleryProvider({ children }) {
             const targetSlug = resolveCategorySlug(foto.categoria_slug, availableSlugs)
             if (!targetSlug || seen.has(targetSlug)) continue
             seen.add(targetSlug)
-            capasPorCategoria[targetSlug] = [mapFoto({ ...foto, categoria_slug: targetSlug }, localMetricsRef.current)]
+            capasPorCategoria[targetSlug] = [mapFoto({ ...foto, categoria_slug: targetSlug })]
           }
         }
       }
@@ -156,11 +137,6 @@ export function GalleryProvider({ children }) {
       if (!ativo) return
 
       setCategories(categoriasMapeadas)
-
-      // ─── CORREÇÃO DA RACE CONDITION ──────────────────────────────────────
-      // sync() carrega apenas 1 capa por categoria (thumbnail do grid).
-      // Se ensureCategoryPhotosLoaded já carregou as fotos completas de uma
-      // categoria, preservamos — não sobrescrevemos com a capa única.
       setPhotos((prev) => {
         const next = { ...capasPorCategoria }
         for (const slug of loadedRef.current) {
@@ -188,9 +164,6 @@ export function GalleryProvider({ children }) {
     try {
       const normalizedCategoryId = normalizeSlug(categoryId)
 
-      // Busca todas as fotos ativas e filtra por categoria no cliente.
-      // Isso resolve diferenças de acento (ex: grávidas vs gravidas) e
-      // evita o erro 400 do PostgREST com filtros compostos.
       const { data, error } = await supabase
         .from('fotos')
         .select(FOTO_COLS)
@@ -204,7 +177,7 @@ export function GalleryProvider({ children }) {
 
         setPhotos((prev) => ({
           ...prev,
-          [categoryId]: filtered.map((f) => mapFoto(f, localMetricsRef.current)),
+          [categoryId]: filtered.map(mapFoto),
         }))
 
         loadedRef.current.add(categoryId)
@@ -237,53 +210,86 @@ export function GalleryProvider({ children }) {
       return { ...p, [categoryId]: arr }
     })
 
+  // ─── VIEWS: incremento atômico via RPC (funciona para usuários anon) ───
   const incrementPhotoViews = useCallback(async (categoryId, photoId) => {
     if (!categoryId || !photoId) return
-    let nextViews = null
+
+    // Atualiza UI imediatamente (otimista)
     setPhotos((prev) => {
       const list = prev[categoryId] || []
-      const updated = list.map((photo) => {
-        if (photo.id !== String(photoId)) return photo
-        const views = Number(photo.views || 0) + 1
-        nextViews = views
-        return { ...photo, views }
-      })
-      return { ...prev, [categoryId]: updated }
+      return {
+        ...prev,
+        [categoryId]: list.map((photo) =>
+          photo.id === String(photoId)
+            ? { ...photo, views: (photo.views || 0) + 1 }
+            : photo
+        ),
+      }
     })
-    if (nextViews === null) return
-    localMetricsRef.current = {
-      ...localMetricsRef.current,
-      [String(photoId)]: { ...(localMetricsRef.current[String(photoId)] || {}), views: nextViews },
-    }
-    writeLocalMetrics(localMetricsRef.current)
+
+    // Persiste no banco com incremento atômico
     try {
-      await supabase.from('fotos').update({ views: nextViews }).eq('id', photoId)
-    } catch { /* noop */ }
+      const { data: novoValor } = await supabase
+        .rpc('increment_foto_views', { foto_id: photoId })
+
+      // Sincroniza com o valor real do banco (pode diferir se houver acessos simultâneos)
+      if (novoValor !== null && novoValor !== undefined) {
+        setPhotos((prev) => {
+          const list = prev[categoryId] || []
+          return {
+            ...prev,
+            [categoryId]: list.map((photo) =>
+              photo.id === String(photoId)
+                ? { ...photo, views: novoValor }
+                : photo
+            ),
+          }
+        })
+      }
+    } catch (err) {
+      console.error('[views] Erro ao salvar no banco:', err)
+    }
   }, [])
 
+  // ─── LIKES: incremento/decremento atômico via RPC ───
   const togglePhotoLike = useCallback(async (categoryId, photoId, liked) => {
     if (!categoryId || !photoId) return
-    let nextLikes = null
-    const delta = liked ? 1 : -1
+
+    // Atualiza UI imediatamente (otimista)
     setPhotos((prev) => {
       const list = prev[categoryId] || []
-      const updated = list.map((photo) => {
-        if (photo.id !== String(photoId)) return photo
-        const likes = Math.max(0, Number(photo.likes || 0) + delta)
-        nextLikes = likes
-        return { ...photo, likes }
-      })
-      return { ...prev, [categoryId]: updated }
+      return {
+        ...prev,
+        [categoryId]: list.map((photo) =>
+          photo.id === String(photoId)
+            ? { ...photo, likes: Math.max(0, (photo.likes || 0) + (liked ? 1 : -1)) }
+            : photo
+        ),
+      }
     })
-    if (nextLikes === null) return
-    localMetricsRef.current = {
-      ...localMetricsRef.current,
-      [String(photoId)]: { ...(localMetricsRef.current[String(photoId)] || {}), likes: nextLikes },
-    }
-    writeLocalMetrics(localMetricsRef.current)
+
+    // Persiste no banco com incremento atômico
     try {
-      await supabase.from('fotos').update({ likes: nextLikes }).eq('id', photoId)
-    } catch { /* noop */ }
+      const { data: novoValor } = await supabase
+        .rpc('toggle_foto_like', { foto_id: photoId, increment: liked })
+
+      // Sincroniza com o valor real do banco
+      if (novoValor !== null && novoValor !== undefined) {
+        setPhotos((prev) => {
+          const list = prev[categoryId] || []
+          return {
+            ...prev,
+            [categoryId]: list.map((photo) =>
+              photo.id === String(photoId)
+                ? { ...photo, likes: novoValor }
+                : photo
+            ),
+          }
+        })
+      }
+    } catch (err) {
+      console.error('[likes] Erro ao salvar no banco:', err)
+    }
   }, [])
 
   const allPhotos = useMemo(
