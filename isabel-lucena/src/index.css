@@ -7,14 +7,11 @@
   *::before,
   *::after {
     box-sizing: border-box;
-    /* Remove o tap highlight azul do iOS/Android */
     -webkit-tap-highlight-color: transparent;
   }
 
   html {
-    /* Scroll behavior nativo suave */
     scroll-behavior: smooth;
-    /* Evita zoom acidental ao focar inputs no iOS */
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
   }
@@ -25,7 +22,6 @@
     font-family: 'DM Sans', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Scroll inercial no iOS */
     -webkit-overflow-scrolling: touch;
     overflow-x: hidden;
   }
@@ -35,14 +31,12 @@
     color: #0F0F0F;
   }
 
-  /* Focus ring acessível e visível */
   :focus-visible {
     outline: 2px solid #C9A96E;
     outline-offset: 3px;
     border-radius: 4px;
   }
 
-  /* Scrollbar fina e discreta */
   ::-webkit-scrollbar { width: 3px; height: 3px; }
   ::-webkit-scrollbar-track { background: #0F0F0F; }
   ::-webkit-scrollbar-thumb { background: #C9A96E40; border-radius: 99px; }
@@ -57,6 +51,29 @@
   }
   .scrollbar-none::-webkit-scrollbar {
     display: none;
+  }
+
+  /* ─── Botão dourado padrão ─── */
+  .btn-gold {
+    @apply inline-flex items-center gap-2
+           px-6 py-3 rounded-full
+           bg-[#C9A96E] text-[#0F0F0F]
+           font-body font-semibold text-sm
+           transition-all duration-300
+           hover:bg-[#E2C99A] hover:shadow-[0_4px_24px_rgba(201,169,110,0.4)]
+           active:scale-95
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* ─── Botão outline padrão ─── */
+  .btn-outline {
+    @apply inline-flex items-center gap-2
+           px-6 py-3 rounded-full
+           border border-white/25 text-white/80
+           font-body text-sm
+           transition-all duration-300
+           hover:border-[#C9A96E]/50 hover:text-white
+           active:scale-95;
   }
 }
 

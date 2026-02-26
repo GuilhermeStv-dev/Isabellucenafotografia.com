@@ -1,5 +1,5 @@
 import { useState, useMemo, memo, useRef, useEffect } from 'react'
-import { Eye, Heart, MessageCircle } from 'lucide-react'
+import { Eye, Heart } from 'lucide-react'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
 import BlurImage from './BlurImage'
 
@@ -47,6 +47,8 @@ function PhotoCard({ photo, onClick, onLoadComplete }) {
     completeLoad()
   }
 
+  const hasStats = (photo.views > 0 || photo.likes > 0)
+
   return (
     <div
       className="relative overflow-hidden rounded-lg cursor-pointer group bg-[#1A1A1A]"
@@ -70,7 +72,7 @@ function PhotoCard({ photo, onClick, onLoadComplete }) {
         />
       </div>
 
-      {(photo.views > 0 || photo.likes > 0 || photo.comments > 0) && (
+      {hasStats && (
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent
                         opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
           <div className="flex items-center gap-4 text-white/80 text-xs translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
@@ -79,9 +81,6 @@ function PhotoCard({ photo, onClick, onLoadComplete }) {
             </span>
             <span className="flex items-center gap-1">
               <Heart size={13} /> {photo.likes ?? 0}
-            </span>
-            <span className="flex items-center gap-1">
-              <MessageCircle size={13} /> {photo.comments ?? 0}
             </span>
           </div>
         </div>
@@ -96,7 +95,6 @@ export default memo(PhotoCard, (prev, next) =>
   prev.photo.placeholder === next.photo.placeholder &&
   prev.photo.views === next.photo.views &&
   prev.photo.likes === next.photo.likes &&
-  prev.photo.comments === next.photo.comments &&
   prev.onClick === next.onClick &&
   prev.onLoadComplete === next.onLoadComplete
 )

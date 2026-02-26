@@ -11,6 +11,7 @@ function FullscreenViewer({
   index,
   total,
   liked,
+  displayLikes,
   onClose,
   onPrev,
   onNext,
@@ -108,10 +109,15 @@ function FullscreenViewer({
         <span className="flex items-center gap-1"><Eye size={13} /> {photo.views || 0}</span>
         <button
           onClick={onToggleLike}
-          className={`flex items-center gap-1 transition-colors ${liked ? 'text-gold' : 'text-white/80 hover:text-white'}`}
+          className={`flex items-center gap-1.5 transition-colors ${liked ? 'text-gold' : 'text-white/80 hover:text-white'}`}
           aria-label={liked ? 'Descurtir foto' : 'Curtir foto'}
         >
-          <Heart size={13} fill={liked ? 'currentColor' : 'none'} /> {photo.likes || 0}
+          <Heart
+            size={13}
+            fill={liked ? 'currentColor' : 'none'}
+            className="transition-all duration-200"
+          />
+          <span className="tabular-nums">{displayLikes}</span>
         </button>
       </div>
     </div>
@@ -132,6 +138,10 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
     }
   })
 
+  // Estado local para atualização imediata do contador de likes
+  // sem depender da propagação do contexto
+  const [localLikesMap, setLocalLikesMap] = useState({})
+
   const lastTrackedViewRef = useRef('')
   const photosRef = useRef(photos)
 
@@ -151,6 +161,11 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
       setLikedByUser(new Set())
     }
   }, [likesKey])
+
+  // Reseta o mapa local quando as fotos mudam de categoria
+  useEffect(() => {
+    setLocalLikesMap({})
+  }, [categoryId])
 
   const visiblePhotos = useMemo(() => photos.slice(0, visible), [photos, visible])
 
@@ -204,18 +219,33 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
   const currentPhoto = photos[index]
   const currentLiked = currentPhoto ? likedByUser.has(String(currentPhoto.id)) : false
 
+  // Likes a exibir: preferência para o estado local (atualizado imediatamente)
+  // e fallback para o valor que veio do contexto/banco
+  const displayLikes = currentPhoto
+    ? (localLikesMap[String(currentPhoto.id)] ?? currentPhoto.likes ?? 0)
+    : 0
+
   const handleToggleLike = useCallback(() => {
     if (!currentPhoto?.id || !categoryId) return
     const photoId = String(currentPhoto.id)
     const willLike = !likedByUser.has(photoId)
+
+    // 1. Atualiza liked status imediatamente
     setLikedByUser((prev) => {
       const next = new Set(prev)
       if (willLike) next.add(photoId)
       else next.delete(photoId)
       return next
     })
+
+    // 2. Atualiza contador local imediatamente (sem esperar contexto)
+    const currentCount = localLikesMap[photoId] ?? Number(currentPhoto.likes || 0)
+    const nextCount = Math.max(0, currentCount + (willLike ? 1 : -1))
+    setLocalLikesMap((prev) => ({ ...prev, [photoId]: nextCount }))
+
+    // 3. Propaga para contexto (atualiza banco + estado global)
     onToggleLike?.(categoryId, photoId, willLike)
-  }, [currentPhoto, categoryId, likedByUser, onToggleLike])
+  }, [currentPhoto, categoryId, likedByUser, localLikesMap, onToggleLike])
 
   return (
     <div>
@@ -251,6 +281,7 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
           index={index}
           total={photos.length}
           liked={currentLiked}
+          displayLikes={displayLikes}
           onClose={() => setOpen(false)}
           onPrev={handlePrev}
           onNext={handleNext}
