@@ -385,19 +385,23 @@ function AbaUpload({ categorias, onUploadConcluido }) {
 }
 
 function AbaFotos({ categorias }) {
-  const [catSelecionada, setCatSelecionada] = useState('');
+  const [catSelecionada, setCatSelecionada] = useState('__all__');
   const [fotos, setFotos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [excluindo, setExcluindo] = useState(null);
 
   const carregarFotos = useCallback(async (slug) => {
-    if (!slug) return;
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .from('fotos')
-      .select('id, url, placeholder, titulo, ativo, created_at')
-      .eq('categoria_slug', slug)
+      .select('id, url, placeholder, titulo, ativo, created_at, categoria_slug')
       .order('created_at', { ascending: false });
+
+    if (slug && slug !== '__all__') {
+      query = query.eq('categoria_slug', slug);
+    }
+
+    const { data } = await query;
     setFotos(data || []);
     setLoading(false);
   }, []);
@@ -405,6 +409,12 @@ function AbaFotos({ categorias }) {
   useEffect(() => {
     carregarFotos(catSelecionada);
   }, [catSelecionada, carregarFotos]);
+
+  useEffect(() => {
+    if (!categorias?.length && catSelecionada !== '__all__') {
+      setCatSelecionada('__all__');
+    }
+  }, [categorias, catSelecionada]);
 
   const toggleAtivo = async (foto) => {
     await supabase.from('fotos').update({ ativo: !foto.ativo }).eq('id', foto.id);
@@ -435,6 +445,13 @@ function AbaFotos({ categorias }) {
           Categoria
         </label>
         <div className="flex flex-wrap gap-2">
+          <button key="__all__" onClick={() => setCatSelecionada('__all__')}
+            className={`px-4 py-2 rounded-full font-body text-sm border transition-all duration-200 active:scale-95
+              ${catSelecionada === '__all__'
+                ? 'bg-gold text-dark border-gold font-semibold'
+                : 'border-dark-300 text-white/60 hover:border-gold/40 hover:text-white'}`}>
+            Todas
+          </button>
           {categorias.map((cat) => (
             <button key={cat.slug} onClick={() => setCatSelecionada(cat.slug)}
               className={`px-4 py-2 rounded-full font-body text-sm border transition-all duration-200 active:scale-95
@@ -447,66 +464,67 @@ function AbaFotos({ categorias }) {
         </div>
       </div>
 
-      {catSelecionada && (
-        <div className="bg-dark-100 rounded-2xl p-6 border border-dark-300">
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
-            </div>
-          ) : fotos.length === 0 ? (
-            <p className="text-center font-body text-white/30 py-12">Nenhuma foto nesta categoria.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {fotos.map((foto) => (
-                <div key={foto.id} className="relative group rounded-xl overflow-hidden aspect-square">
-                  {foto.placeholder && (
-                    <div
-                      className="absolute inset-0"
-                      style={{
-                        backgroundImage: `url("${foto.placeholder}")`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        filter: 'blur(8px)',
-                        transform: 'scale(1.1)',
-                      }}
-                    />
-                  )}
-                  <img
-                    src={foto.url}
-                    alt={foto.titulo || ''}
-                    className="relative z-10 w-full h-full object-cover"
-                    loading="lazy"
-                    decoding="async"
+      <div className="bg-dark-100 rounded-2xl p-6 border border-dark-300">
+        {loading ? (
+          <div className="flex justify-center py-12">
+            <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : fotos.length === 0 ? (
+          <p className="text-center font-body text-white/30 py-12">Nenhuma foto encontrada no Supabase para este filtro.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {fotos.map((foto) => (
+              <div key={foto.id} className="relative group rounded-xl overflow-hidden aspect-square">
+                {foto.placeholder && (
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      backgroundImage: `url("${foto.placeholder}")`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      filter: 'blur(8px)',
+                      transform: 'scale(1.1)',
+                    }}
                   />
-                  {!foto.ativo && (
-                    <div className="absolute inset-0 z-20 bg-black/50 flex items-center justify-center">
-                      <span className="font-body text-xs text-white/60">Oculta</span>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 z-30 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
-                    <button onClick={() => toggleAtivo(foto)}
-                      title={foto.ativo ? 'Ocultar' : 'Mostrar'}
-                      className={`w-8 h-8 rounded-full flex items-center justify-center border transition-colors
-                        ${foto.ativo ? 'border-green-400/50 text-green-400' : 'border-white/30 text-white/60'}`}>
-                      <Icon.Eye off={!foto.ativo} />
-                    </button>
-                    <button onClick={() => excluir(foto)}
-                      disabled={excluindo === foto.id}
-                      className="w-8 h-8 rounded-full flex items-center justify-center border border-red-400/40 text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-40">
-                      {excluindo === foto.id
-                        ? <div className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" />
-                        : <Icon.Trash />}
-                    </button>
+                )}
+                <img
+                  src={foto.url}
+                  alt={foto.titulo || ''}
+                  className="relative z-10 w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+                {!foto.ativo && (
+                  <div className="absolute inset-0 z-20 bg-black/50 flex items-center justify-center">
+                    <span className="font-body text-xs text-white/60">Oculta</span>
                   </div>
+                )}
+                <div className="absolute top-2 left-2 z-30 rounded-full bg-black/55 border border-white/10 px-2 py-0.5">
+                  <span className="font-body text-[10px] text-white/70">{foto.categoria_slug || 'sem-categoria'}</span>
                 </div>
-              ))}
-            </div>
-          )}
-          {fotos.length > 0 && (
-            <p className="font-body text-xs text-white/30 mt-4 text-right">{fotos.length} foto{fotos.length !== 1 ? 's' : ''}</p>
-          )}
-        </div>
-      )}
+                <div className="absolute inset-0 z-30 bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
+                  <button onClick={() => toggleAtivo(foto)}
+                    title={foto.ativo ? 'Ocultar' : 'Mostrar'}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center border transition-colors
+                      ${foto.ativo ? 'border-green-400/50 text-green-400' : 'border-white/30 text-white/60'}`}>
+                    <Icon.Eye off={!foto.ativo} />
+                  </button>
+                  <button onClick={() => excluir(foto)}
+                    disabled={excluindo === foto.id}
+                    className="w-8 h-8 rounded-full flex items-center justify-center border border-red-400/40 text-red-400 hover:bg-red-500/20 transition-colors disabled:opacity-40">
+                    {excluindo === foto.id
+                      ? <div className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" />
+                      : <Icon.Trash />}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {fotos.length > 0 && (
+          <p className="font-body text-xs text-white/30 mt-4 text-right">{fotos.length} foto{fotos.length !== 1 ? 's' : ''}</p>
+        )}
+      </div>
     </div>
   );
 }
