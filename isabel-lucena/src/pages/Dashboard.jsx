@@ -72,22 +72,26 @@ const Icon = {
 };
 
 function LoginScreen({ onLogin }) {
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
-  const [remember, setRemember] = useState(false);
+  const emailRef = useRef(null);
+  const senhaRef = useRef(null);
+  const rememberRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
 
-  useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem('dashboardCreds') || 'null');
-      if (stored) { setEmail(stored.email || ''); setSenha(stored.senha || ''); setRemember(true); }
-    } catch {}
+  const stored = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('dashboardCreds') || 'null'); }
+    catch { return null; }
   }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    setErro(''); setLoading(true);
+    setErro('');
+    setLoading(true);
+
+    const email = emailRef.current?.value || '';
+    const senha = senhaRef.current?.value || '';
+    const remember = rememberRef.current?.checked || false;
+
     const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
     if (error) {
       setErro('E-mail ou senha incorretos.');
@@ -110,16 +114,35 @@ function LoginScreen({ onLogin }) {
           <div className="flex flex-col gap-4 mb-6">
             <div>
               <label htmlFor="dashboard-email" className="font-body text-xs text-white/50 tracking-wide mb-1.5 block">E-mail</label>
-              <input id="dashboard-email" name="email" autoComplete="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="isabel@email.com"
+              <input
+                ref={emailRef}
+                id="dashboard-email"
+                name="email"
+                autoComplete="email"
+                type="email"
+                required
+                placeholder="isabel@email.com"
+                defaultValue={stored?.email || ''}
                 className="w-full bg-dark-200 border border-dark-300 rounded-xl px-4 py-3 font-body text-sm text-white placeholder-white/25 focus:outline-none focus:border-gold/60 transition-colors duration-200" />
             </div>
             <div>
               <label htmlFor="dashboard-password" className="font-body text-xs text-white/50 tracking-wide mb-1.5 block">Senha</label>
-              <input id="dashboard-password" name="password" autoComplete="current-password" type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required placeholder="••••••••"
+              <input
+                ref={senhaRef}
+                id="dashboard-password"
+                name="password"
+                autoComplete="current-password"
+                type="password"
+                required
+                placeholder="••••••••"
+                defaultValue={stored?.senha || ''}
                 className="w-full bg-dark-200 border border-dark-300 rounded-xl px-4 py-3 font-body text-sm text-white placeholder-white/25 focus:outline-none focus:border-gold/60 transition-colors duration-200" />
             </div>
             <label className="inline-flex items-center gap-2 text-white text-sm">
-              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)}
+              <input
+                ref={rememberRef}
+                type="checkbox"
+                defaultChecked={!!stored}
                 className="form-checkbox h-4 w-4 text-gold bg-dark-200 border-dark-300 rounded" />
               Lembrar de mim
             </label>
