@@ -590,7 +590,7 @@ export default function Home() {
 
               <p data-reveal style={revealStyle(180)}
                 className="font-body text-white/55 text-sm md:text-base leading-relaxed mb-4">
-                Sou Isabel Lucena, fotógrafa baseada em Paulo Afonso, Bahia. Com mais de 7 anos de experiência,
+                Sou Isabel Lucena, fotógrafa baseada em São José do Egito, Pernambuco. Com mais de 7 anos de experiência,
                 especializo-me em transformar momentos únicos em memórias eternas.
               </p>
               <p data-reveal style={revealStyle(220)}

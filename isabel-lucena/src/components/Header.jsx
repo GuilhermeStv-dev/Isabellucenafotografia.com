@@ -200,7 +200,7 @@ export default function Header() {
             <ArrowRight size={14} className="arrow-icon" />
           </a>
           <p className="font-body text-[11px] text-white/20 text-center mt-4">
-            Paulo Afonso · Bahia
+            São José do Egito · PE
           </p>
         </div>
       </aside>
