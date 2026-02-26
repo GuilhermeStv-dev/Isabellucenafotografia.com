@@ -172,7 +172,15 @@ export function GalleryProvider({ children }) {
 
       if (!ativo) return
       setCategories(categoriasMapeadas)
-      setPhotos(fotosPorCategoria)
+      setPhotos((prev) => {
+        const next = { ...fotosPorCategoria }
+        for (const slug of loadedRef.current) {
+          if (prev[slug] && prev[slug].length > 0) {
+            next[slug] = prev[slug]
+          }
+        }
+        return next
+      })
     }
 
     sync()
@@ -189,19 +197,23 @@ export function GalleryProvider({ children }) {
     setLoadingPhotosByCategory((prev) => ({ ...prev, [categoryId]: true }))
 
     try {
-      const { data, error } = await selectFotosWithPlaceholderFallback((cols) =>
+      const normalizedId = normalizeSlug(categoryId)
+
+      const { data: allData, error } = await selectFotosWithPlaceholderFallback((cols) =>
         supabase
           .from('fotos')
           .select(cols)
           .eq('ativo', true)
-          .eq('categoria_slug', categoryId)
           .order('created_at', { ascending: false })
       )
 
-      if (!error && data) {
+      if (!error && allData) {
+        const filtered = allData.filter(
+          (foto) => normalizeSlug(foto.categoria_slug) === normalizedId
+        )
         setPhotos((prev) => ({
           ...prev,
-          [categoryId]: data.map((f) => mapFoto(f, localMetricsRef.current)),
+          [categoryId]: filtered.map((f) => mapFoto(f, localMetricsRef.current)),
         }))
         loadedRef.current.add(categoryId)
       }
