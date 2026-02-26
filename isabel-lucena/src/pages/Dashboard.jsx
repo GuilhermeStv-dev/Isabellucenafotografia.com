@@ -105,17 +105,17 @@ function LoginScreen({ onLogin }) {
         <div className="flex flex-col items-center mb-10">
           <img src={LogoBranca} alt="Isabel Lucena" className="h-12 w-auto object-contain" />
         </div>
-        <form onSubmit={handleLogin} className="bg-dark-100 rounded-2xl p-8 border border-dark-300 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
+        <form onSubmit={handleLogin} autoComplete="on" className="bg-dark-100 rounded-2xl p-8 border border-dark-300 shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
           <h2 className="font-body text-white font-medium text-lg mb-6">Entrar no painel</h2>
           <div className="flex flex-col gap-4 mb-6">
             <div>
-              <label className="font-body text-xs text-white/50 tracking-wide mb-1.5 block">E-mail</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="isabel@email.com"
+              <label htmlFor="dashboard-email" className="font-body text-xs text-white/50 tracking-wide mb-1.5 block">E-mail</label>
+              <input id="dashboard-email" name="email" autoComplete="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="isabel@email.com"
                 className="w-full bg-dark-200 border border-dark-300 rounded-xl px-4 py-3 font-body text-sm text-white placeholder-white/25 focus:outline-none focus:border-gold/60 transition-colors duration-200" />
             </div>
             <div>
-              <label className="font-body text-xs text-white/50 tracking-wide mb-1.5 block">Senha</label>
-              <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required placeholder="••••••••"
+              <label htmlFor="dashboard-password" className="font-body text-xs text-white/50 tracking-wide mb-1.5 block">Senha</label>
+              <input id="dashboard-password" name="password" autoComplete="current-password" type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required placeholder="••••••••"
                 className="w-full bg-dark-200 border border-dark-300 rounded-xl px-4 py-3 font-body text-sm text-white placeholder-white/25 focus:outline-none focus:border-gold/60 transition-colors duration-200" />
             </div>
             <label className="inline-flex items-center gap-2 text-white text-sm">
