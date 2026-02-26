@@ -1,6 +1,6 @@
 // src/pages/Dashboard.jsx
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { supabase, uploadFoto, deleteFotoStorage } from '../lib/supabase';
+import { supabase, supabaseAnonRead, uploadFoto, deleteFotoStorage } from '../lib/supabase';
 import { compressImage, runWithConcurrency } from '../lib/imageUtils';
 import { generatePlaceholder } from '../lib/generatePlaceholder';
 import LogoBranca from '../assets/Logo-horzontal-branca.webp';
@@ -389,22 +389,57 @@ function AbaFotos({ categorias }) {
   const [fotos, setFotos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [excluindo, setExcluindo] = useState(null);
+  const [usingAnonFallback, setUsingAnonFallback] = useState(false);
+
+  const normalizeSlug = useCallback((value) => (
+    String(value || '')
+      .toLowerCase()
+      .trim()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/_+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+  ), []);
 
   const carregarFotos = useCallback(async (slug) => {
     setLoading(true);
-    let query = supabase
+    setUsingAnonFallback(false);
+
+    const runQuery = async (client) => client
       .from('fotos')
       .select('id, url, placeholder, titulo, ativo, created_at, categoria_slug')
       .order('created_at', { ascending: false });
 
-    if (slug && slug !== '__all__') {
-      query = query.eq('categoria_slug', slug);
+    let { data, error } = await runQuery(supabase);
+
+    if ((!data || data.length === 0) && !error) {
+      const anonResult = await runQuery(supabaseAnonRead);
+      if (anonResult?.data?.length > 0) {
+        data = anonResult.data;
+        setUsingAnonFallback(true);
+      }
     }
 
-    const { data } = await query;
-    setFotos(data || []);
+    if (error) {
+      const anonResult = await runQuery(supabaseAnonRead);
+      if (anonResult?.data?.length > 0) {
+        data = anonResult.data;
+        error = null;
+        setUsingAnonFallback(true);
+      }
+    }
+
+    const allPhotos = data || [];
+    if (!slug || slug === '__all__') {
+      setFotos(allPhotos);
+    } else {
+      const wanted = normalizeSlug(slug);
+      setFotos(allPhotos.filter((foto) => normalizeSlug(foto.categoria_slug) === wanted));
+    }
     setLoading(false);
-  }, []);
+  }, [normalizeSlug]);
 
   useEffect(() => {
     carregarFotos(catSelecionada);
@@ -465,6 +500,11 @@ function AbaFotos({ categorias }) {
       </div>
 
       <div className="bg-dark-100 rounded-2xl p-6 border border-dark-300">
+        {usingAnonFallback && (
+          <p className="font-body text-xs text-yellow-300/80 mb-3">
+            Exibindo leitura pública (anon). A sessão logada não está com permissão de leitura completa em `public.fotos`.
+          </p>
+        )}
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="w-6 h-6 border-2 border-gold border-t-transparent rounded-full animate-spin" />
