@@ -27,8 +27,6 @@ export default function Footer() {
   const navLinks = [
     { label: 'Trabalhos', to: '/trabalhos' },
     { label: 'Sobre mim', to: '/sobre' },
-    { label: 'Serviços', to: '/servicos' },
-    { label: 'Destaques', to: '/destaques' },
     { label: 'Meu Blog', to: '/blog' },
   ];
 
@@ -67,6 +65,10 @@ export default function Footer() {
             >
               isabeltravassos2015@gmail.com
             </a>
+            <p className="text-sm text-white/40 leading-snug mt-1">
+              R. Cel. José Santana<br />
+              São José do Egito · PE
+            </p>
           </div>
 
           {/* Nav links */}
@@ -133,7 +135,7 @@ export default function Footer() {
 
         {/* ── Copyright ── */}
         <p className="text-center text-xs text-white/30 tracking-wide">
-          © 2025 Isabel Lucena Fotografia. Todos os direitos reservados.
+          © 2026 Isabel Lucena Fotografia. Todos os direitos reservados.
         </p>
       </div>
     </footer>
