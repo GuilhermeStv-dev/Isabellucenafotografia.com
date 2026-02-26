@@ -23,6 +23,28 @@ const getTagFromSlug = (slug = '', nome = '') => {
   return 'Ensaios'
 }
 
+const normalizeSlug = (value = '') => (
+  String(value || '')
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/_+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+)
+
+const resolveCategorySlug = (rawSlug, availableSlugs) => {
+  if (!rawSlug) return null
+  if (availableSlugs.has(rawSlug)) return rawSlug
+  const normalizedRaw = normalizeSlug(rawSlug)
+  for (const slug of availableSlugs) {
+    if (normalizeSlug(slug) === normalizedRaw) return slug
+  }
+  return null
+}
+
 const GalleryContext = createContext(null)
 const LOCAL_METRICS_KEY = 'il_photo_metrics'
 
@@ -107,6 +129,7 @@ export function GalleryProvider({ children }) {
       }))
 
       const slugs = categoriasMapeadas.map((c) => c.id)
+      const availableSlugs = new Set(slugs)
       const baseFotos = Object.fromEntries(slugs.map((s) => [s, []]))
 
       if (!slugs.length) {
@@ -121,7 +144,9 @@ export function GalleryProvider({ children }) {
 
       if (!rpcErr && rpcData) {
         for (const foto of rpcData) {
-          fotosPorCategoria[foto.categoria_slug] = [mapFoto(foto, localMetricsRef.current)]
+          const targetSlug = resolveCategorySlug(foto.categoria_slug, availableSlugs)
+          if (!targetSlug) continue
+          fotosPorCategoria[targetSlug] = [mapFoto({ ...foto, categoria_slug: targetSlug }, localMetricsRef.current)]
         }
       } else {
         const { data: fallbackData } = await selectFotosWithPlaceholderFallback((cols) =>
@@ -137,9 +162,10 @@ export function GalleryProvider({ children }) {
         if (fallbackData) {
           const seen = new Set()
           for (const foto of fallbackData) {
-            if (seen.has(foto.categoria_slug)) continue
-            seen.add(foto.categoria_slug)
-            fotosPorCategoria[foto.categoria_slug] = [mapFoto(foto, localMetricsRef.current)]
+            const targetSlug = resolveCategorySlug(foto.categoria_slug, availableSlugs)
+            if (!targetSlug || seen.has(targetSlug)) continue
+            seen.add(targetSlug)
+            fotosPorCategoria[targetSlug] = [mapFoto({ ...foto, categoria_slug: targetSlug }, localMetricsRef.current)]
           }
         }
       }
@@ -168,14 +194,15 @@ export function GalleryProvider({ children }) {
           .from('fotos')
           .select(cols)
           .eq('ativo', true)
-          .eq('categoria_slug', categoryId)
           .order('created_at', { ascending: false })
       )
 
       if (!error && data) {
+        const normalizedCategoryId = normalizeSlug(categoryId)
+        const filtered = data.filter((foto) => normalizeSlug(foto.categoria_slug) === normalizedCategoryId)
         setPhotos((prev) => ({
           ...prev,
-          [categoryId]: data.map((f) => mapFoto(f, localMetricsRef.current)),
+          [categoryId]: filtered.map((f) => mapFoto(f, localMetricsRef.current)),
         }))
         loadedRef.current.add(categoryId)
       }
