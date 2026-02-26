@@ -64,36 +64,22 @@ const mergeMetricValue = (photoId, field, dbValue, localMetrics) => {
   return Math.max(Number(dbValue || 0), local)
 }
 
-const mapFoto = (f, localMetrics) => ({
+// Colunas reais da tabela fotos
+const FOTO_COLS = 'id, categoria_slug, url, titulo, placeholder, views, likes'
+
+const mapFoto = (f, localMetrics = {}) => ({
   id: String(f.id),
   url: f.url,
+  titulo: f.titulo || null,
   placeholder: f.placeholder || null,
   views: mergeMetricValue(f.id, 'views', f.views, localMetrics),
   likes: mergeMetricValue(f.id, 'likes', f.likes, localMetrics),
 })
 
-const FOTO_COLS = 'id, categoria_slug, url, placeholder, views, likes'
-const FOTO_COLS_NO_PLACEHOLDER = 'id, categoria_slug, url, views, likes'
-
-const isMissingPlaceholderColumnError = (error) => {
-  const text = `${error?.message || ''} ${error?.details || ''}`.toLowerCase()
-  return text.includes('placeholder') && text.includes('fotos')
-}
-
-const selectFotosWithPlaceholderFallback = async (buildQuery) => {
-  const primary = await buildQuery(FOTO_COLS)
-  if (!isMissingPlaceholderColumnError(primary.error)) return primary
-
-  const fallback = await buildQuery(FOTO_COLS_NO_PLACEHOLDER)
-  return {
-    ...fallback,
-    data: (fallback.data || []).map((row) => ({ ...row, placeholder: null })),
-  }
-}
-
 export function GalleryProvider({ children }) {
   const loadedRef = useRef(new Set())
   const loadingRef = useRef({})
+  const localMetricsRef = useRef(readLocalMetrics())
 
   const [categories, setCategories] = useState(() => {
     try {
@@ -104,7 +90,6 @@ export function GalleryProvider({ children }) {
 
   const [photos, setPhotos] = useState({})
   const [loadingPhotosByCategory, setLoadingPhotosByCategory] = useState({})
-  const localMetricsRef = useRef(readLocalMetrics())
 
   useEffect(() => {
     localStorage.setItem('il_categories', JSON.stringify(categories))
@@ -137,10 +122,11 @@ export function GalleryProvider({ children }) {
         return
       }
 
-      let capasPorCategoria = { ...baseFotos }
-
+      // Tenta RPC para capas otimizadas
       const { data: rpcData, error: rpcErr } = await supabase
         .rpc('get_category_covers', { category_slugs: slugs })
+
+      let capasPorCategoria = { ...baseFotos }
 
       if (!rpcErr && rpcData) {
         for (const foto of rpcData) {
@@ -149,15 +135,12 @@ export function GalleryProvider({ children }) {
           capasPorCategoria[targetSlug] = [mapFoto({ ...foto, categoria_slug: targetSlug }, localMetricsRef.current)]
         }
       } else {
-        const { data: fallbackData } = await selectFotosWithPlaceholderFallback((cols) =>
-          supabase
-            .from('fotos')
-            .select(cols)
-            .eq('ativo', true)
-            .in('categoria_slug', slugs)
-            .order('created_at', { ascending: false })
-            .limit(100)
-        )
+        // Fallback: busca todas e pega a primeira de cada categoria
+        const { data: fallbackData } = await supabase
+          .from('fotos')
+          .select(FOTO_COLS)
+          .eq('ativo', true)
+          .order('created_at', { ascending: false })
 
         if (fallbackData) {
           const seen = new Set()
@@ -175,9 +158,9 @@ export function GalleryProvider({ children }) {
       setCategories(categoriasMapeadas)
 
       // ─── CORREÇÃO DA RACE CONDITION ──────────────────────────────────────
-      // sync() só carrega 1 capa por categoria (para thumbnail no grid).
-      // Se ensureCategoryPhotosLoaded já terminou e salvou as fotos completas
-      // de uma categoria em loadedRef, NÃO sobrescrevemos com a capa única.
+      // sync() carrega apenas 1 capa por categoria (thumbnail do grid).
+      // Se ensureCategoryPhotosLoaded já carregou as fotos completas de uma
+      // categoria, preservamos — não sobrescrevemos com a capa única.
       setPhotos((prev) => {
         const next = { ...capasPorCategoria }
         for (const slug of loadedRef.current) {
@@ -203,21 +186,18 @@ export function GalleryProvider({ children }) {
     setLoadingPhotosByCategory((prev) => ({ ...prev, [categoryId]: true }))
 
     try {
-      // ─── QUERY ORIGINAL — busca todas as fotos ativas e filtra no cliente ──
-      // Não adicionamos .eq('categoria_slug') nem .limit() altos aqui
-      // porque o PostgREST deste projeto rejeita essas combinações com 400.
-      // O filtro por categoria é feito no cliente com normalizeSlug,
-      // o que também resolve diferenças de acento (ex: grávidas vs gravidas).
-      const { data, error } = await selectFotosWithPlaceholderFallback((cols) =>
-        supabase
-          .from('fotos')
-          .select(cols)
-          .eq('ativo', true)
-          .order('created_at', { ascending: false })
-      )
+      const normalizedCategoryId = normalizeSlug(categoryId)
+
+      // Busca todas as fotos ativas e filtra por categoria no cliente.
+      // Isso resolve diferenças de acento (ex: grávidas vs gravidas) e
+      // evita o erro 400 do PostgREST com filtros compostos.
+      const { data, error } = await supabase
+        .from('fotos')
+        .select(FOTO_COLS)
+        .eq('ativo', true)
+        .order('created_at', { ascending: false })
 
       if (!error && data) {
-        const normalizedCategoryId = normalizeSlug(categoryId)
         const filtered = data.filter(
           (foto) => normalizeSlug(foto.categoria_slug) === normalizedCategoryId
         )
@@ -277,7 +257,7 @@ export function GalleryProvider({ children }) {
     }
     writeLocalMetrics(localMetricsRef.current)
     try {
-      await supabase.from('fotos').update({ views: nextViews }).eq('id', Number(photoId))
+      await supabase.from('fotos').update({ views: nextViews }).eq('id', photoId)
     } catch { /* noop */ }
   }, [])
 
@@ -302,7 +282,7 @@ export function GalleryProvider({ children }) {
     }
     writeLocalMetrics(localMetricsRef.current)
     try {
-      await supabase.from('fotos').update({ likes: nextLikes }).eq('id', Number(photoId))
+      await supabase.from('fotos').update({ likes: nextLikes }).eq('id', photoId)
     } catch { /* noop */ }
   }, [])
 
