@@ -75,11 +75,9 @@ const mapFoto = (f, localMetrics) => ({
 const FOTO_COLS = 'id, categoria_slug, url, placeholder, views, likes'
 const FOTO_COLS_NO_PLACEHOLDER = 'id, categoria_slug, url, views, likes'
 
-// Verifica se o erro é coluna placeholder inexistente
 const isMissingPlaceholderColumnError = (error) => {
-  if (!error) return false
   const text = `${error?.message || ''} ${error?.details || ''}`.toLowerCase()
-  return text.includes('placeholder')
+  return text.includes('placeholder') && text.includes('fotos')
 }
 
 const selectFotosWithPlaceholderFallback = async (buildQuery) => {
@@ -96,9 +94,6 @@ const selectFotosWithPlaceholderFallback = async (buildQuery) => {
 export function GalleryProvider({ children }) {
   const loadedRef = useRef(new Set())
   const loadingRef = useRef({})
-
-  // Mapa: slug_normalizado → slug_real_no_banco (resolve diferença de acentos)
-  const slugMapRef = useRef({})
 
   const [categories, setCategories] = useState(() => {
     try {
@@ -132,13 +127,6 @@ export function GalleryProvider({ children }) {
         label: c.nome,
         tag: getTagFromSlug(c.slug, c.nome),
       }))
-
-      // Monta mapa normalizado → slug real do banco
-      const newSlugMap = {}
-      for (const c of cats) {
-        newSlugMap[normalizeSlug(c.slug)] = c.slug
-      }
-      slugMapRef.current = newSlugMap
 
       const slugs = categoriasMapeadas.map((c) => c.id)
       const availableSlugs = new Set(slugs)
@@ -186,10 +174,10 @@ export function GalleryProvider({ children }) {
 
       setCategories(categoriasMapeadas)
 
-      // ─── FIX RACE CONDITION ──────────────────────────────────────────────
-      // sync() só carrega 1 capa por categoria.
-      // Se ensureCategoryPhotosLoaded já terminou e carregou as fotos completas,
-      // NÃO sobrescrevemos. Preservamos o que já foi carregado.
+      // ─── CORREÇÃO DA RACE CONDITION ──────────────────────────────────────
+      // sync() só carrega 1 capa por categoria (para thumbnail no grid).
+      // Se ensureCategoryPhotosLoaded já terminou e salvou as fotos completas
+      // de uma categoria em loadedRef, NÃO sobrescrevemos com a capa única.
       setPhotos((prev) => {
         const next = { ...capasPorCategoria }
         for (const slug of loadedRef.current) {
@@ -215,25 +203,30 @@ export function GalleryProvider({ children }) {
     setLoadingPhotosByCategory((prev) => ({ ...prev, [categoryId]: true }))
 
     try {
-      // Resolve o slug exato do banco (trata diferenças de acento)
-      const realSlug = slugMapRef.current[normalizeSlug(categoryId)] || categoryId
-
-      // ─── BUSCA APENAS AS FOTOS DESTA CATEGORIA NO SERVIDOR ───────────────
-      // Sem .limit() alto — filtra por categoria no banco, evita o erro 400
+      // ─── QUERY ORIGINAL — busca todas as fotos ativas e filtra no cliente ──
+      // Não adicionamos .eq('categoria_slug') nem .limit() altos aqui
+      // porque o PostgREST deste projeto rejeita essas combinações com 400.
+      // O filtro por categoria é feito no cliente com normalizeSlug,
+      // o que também resolve diferenças de acento (ex: grávidas vs gravidas).
       const { data, error } = await selectFotosWithPlaceholderFallback((cols) =>
         supabase
           .from('fotos')
           .select(cols)
           .eq('ativo', true)
-          .eq('categoria_slug', realSlug)
           .order('created_at', { ascending: false })
       )
 
       if (!error && data) {
+        const normalizedCategoryId = normalizeSlug(categoryId)
+        const filtered = data.filter(
+          (foto) => normalizeSlug(foto.categoria_slug) === normalizedCategoryId
+        )
+
         setPhotos((prev) => ({
           ...prev,
-          [categoryId]: data.map((f) => mapFoto(f, localMetricsRef.current)),
+          [categoryId]: filtered.map((f) => mapFoto(f, localMetricsRef.current)),
         }))
+
         loadedRef.current.add(categoryId)
       }
     } finally {
