@@ -51,6 +51,23 @@ const mapFoto = (f, localMetrics) => ({
 })
 
 const FOTO_COLS = 'id, categoria_slug, url, placeholder, views, likes'
+const FOTO_COLS_NO_PLACEHOLDER = 'id, categoria_slug, url, views, likes'
+
+const isMissingPlaceholderColumnError = (error) => {
+  const text = `${error?.message || ''} ${error?.details || ''}`.toLowerCase()
+  return text.includes('placeholder') && text.includes('fotos')
+}
+
+const selectFotosWithPlaceholderFallback = async (buildQuery) => {
+  const primary = await buildQuery(FOTO_COLS)
+  if (!isMissingPlaceholderColumnError(primary.error)) return primary
+
+  const fallback = await buildQuery(FOTO_COLS_NO_PLACEHOLDER)
+  return {
+    ...fallback,
+    data: (fallback.data || []).map((row) => ({ ...row, placeholder: null })),
+  }
+}
 
 export function GalleryProvider({ children }) {
   const loadedRef = useRef(new Set())
@@ -107,13 +124,15 @@ export function GalleryProvider({ children }) {
           fotosPorCategoria[foto.categoria_slug] = [mapFoto(foto, localMetricsRef.current)]
         }
       } else {
-        const { data: fallbackData } = await supabase
-          .from('fotos')
-          .select(FOTO_COLS)
-          .eq('ativo', true)
-          .in('categoria_slug', slugs)
-          .order('created_at', { ascending: false })
-          .limit(100)
+        const { data: fallbackData } = await selectFotosWithPlaceholderFallback((cols) =>
+          supabase
+            .from('fotos')
+            .select(cols)
+            .eq('ativo', true)
+            .in('categoria_slug', slugs)
+            .order('created_at', { ascending: false })
+            .limit(100)
+        )
 
         if (fallbackData) {
           const seen = new Set()
@@ -144,12 +163,14 @@ export function GalleryProvider({ children }) {
     setLoadingPhotosByCategory((prev) => ({ ...prev, [categoryId]: true }))
 
     try {
-      const { data, error } = await supabase
-        .from('fotos')
-        .select(FOTO_COLS)
-        .eq('ativo', true)
-        .eq('categoria_slug', categoryId)
-        .order('created_at', { ascending: false })
+      const { data, error } = await selectFotosWithPlaceholderFallback((cols) =>
+        supabase
+          .from('fotos')
+          .select(cols)
+          .eq('ativo', true)
+          .eq('categoria_slug', categoryId)
+          .order('created_at', { ascending: false })
+      )
 
       if (!error && data) {
         setPhotos((prev) => ({

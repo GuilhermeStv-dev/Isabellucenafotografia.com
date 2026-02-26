@@ -187,6 +187,11 @@ function AbaUpload({ categorias, onUploadConcluido }) {
   const [filas, setFilas] = useState([]);
   const [fazendoUpload, setFazendoUpload] = useState(false);
 
+  const isMissingPlaceholderColumnError = useCallback((error) => {
+    const text = `${error?.message || ''} ${error?.details || ''}`.toLowerCase();
+    return text.includes('placeholder') && text.includes('fotos');
+  }, []);
+
   const adicionarArquivos = useCallback((files) => {
     const novos = files.map((f) => ({
       id: `${f.name}-${Date.now()}-${Math.random()}`,
@@ -237,13 +242,24 @@ function AbaUpload({ categorias, onUploadConcluido }) {
         const url = await uploadFoto(fileToUpload, catSelecionada);
 
         // 4. Persiste no banco (inclui placeholder)
-        const { error } = await supabase.from('fotos').insert({
+        let { error } = await supabase.from('fotos').insert({
           categoria_slug: catSelecionada,
           url,
           titulo: item.file.name.replace(/\.[^.]+$/, ''),
           ativo: true,
           placeholder: placeholder || null,
         });
+
+        if (error && isMissingPlaceholderColumnError(error)) {
+          const retry = await supabase.from('fotos').insert({
+            categoria_slug: catSelecionada,
+            url,
+            titulo: item.file.name.replace(/\.[^.]+$/, ''),
+            ativo: true,
+          });
+          error = retry.error;
+        }
+
         if (error) throw error;
 
         setItemStatus(item.id, { status: 'ok' });
@@ -403,19 +419,37 @@ function AbaFotos({ categorias }) {
       .replace(/[^a-z0-9-]/g, '')
   ), []);
 
+  const isMissingPlaceholderColumnError = useCallback((error) => {
+    const text = `${error?.message || ''} ${error?.details || ''}`.toLowerCase();
+    return text.includes('placeholder') && text.includes('fotos');
+  }, []);
+
   const carregarFotos = useCallback(async (slug) => {
     setLoading(true);
     setUsingAnonFallback(false);
 
-    const runQuery = async (client) => client
+    const runQuery = async (client, withPlaceholder = true) => client
       .from('fotos')
-      .select('id, url, placeholder, titulo, ativo, created_at, categoria_slug')
+      .select(withPlaceholder
+        ? 'id, url, placeholder, titulo, ativo, created_at, categoria_slug'
+        : 'id, url, titulo, ativo, created_at, categoria_slug')
       .order('created_at', { ascending: false });
 
-    let { data, error } = await runQuery(supabase);
+    const runQuerySafe = async (client) => {
+      const first = await runQuery(client, true);
+      if (!isMissingPlaceholderColumnError(first.error)) return first;
+      const fallback = await runQuery(client, false);
+      return {
+        ...fallback,
+        data: (fallback.data || []).map((row) => ({ ...row, placeholder: null }),
+      )
+      };
+    };
+
+    let { data, error } = await runQuerySafe(supabase);
 
     if ((!data || data.length === 0) && !error) {
-      const anonResult = await runQuery(supabaseAnonRead);
+      const anonResult = await runQuerySafe(supabaseAnonRead);
       if (anonResult?.data?.length > 0) {
         data = anonResult.data;
         setUsingAnonFallback(true);
@@ -423,7 +457,7 @@ function AbaFotos({ categorias }) {
     }
 
     if (error) {
-      const anonResult = await runQuery(supabaseAnonRead);
+      const anonResult = await runQuerySafe(supabaseAnonRead);
       if (anonResult?.data?.length > 0) {
         data = anonResult.data;
         error = null;
@@ -439,7 +473,7 @@ function AbaFotos({ categorias }) {
       setFotos(allPhotos.filter((foto) => normalizeSlug(foto.categoria_slug) === wanted));
     }
     setLoading(false);
-  }, [normalizeSlug]);
+  }, [normalizeSlug, isMissingPlaceholderColumnError]);
 
   useEffect(() => {
     carregarFotos(catSelecionada);

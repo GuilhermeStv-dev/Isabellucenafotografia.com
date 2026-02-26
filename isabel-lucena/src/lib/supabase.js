@@ -3,11 +3,19 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_HOST = (() => {
+  try {
+    return new URL(SUPABASE_URL).host;
+  } catch {
+    return 'unknown-host';
+  }
+})();
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export const supabaseAnonRead = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
+    storageKey: `sb-${SUPABASE_HOST}-anon-read`,
     persistSession: false,
     autoRefreshToken: false,
     detectSessionInUrl: false,
