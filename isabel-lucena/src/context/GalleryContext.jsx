@@ -137,7 +137,7 @@ export function GalleryProvider({ children }) {
         return
       }
 
-      let fotosPorCategoria = { ...baseFotos }
+      let capasPorCategoria = { ...baseFotos }
 
       const { data: rpcData, error: rpcErr } = await supabase
         .rpc('get_category_covers', { category_slugs: slugs })
@@ -146,7 +146,7 @@ export function GalleryProvider({ children }) {
         for (const foto of rpcData) {
           const targetSlug = resolveCategorySlug(foto.categoria_slug, availableSlugs)
           if (!targetSlug) continue
-          fotosPorCategoria[targetSlug] = [mapFoto({ ...foto, categoria_slug: targetSlug }, localMetricsRef.current)]
+          capasPorCategoria[targetSlug] = [mapFoto({ ...foto, categoria_slug: targetSlug }, localMetricsRef.current)]
         }
       } else {
         const { data: fallbackData } = await selectFotosWithPlaceholderFallback((cols) =>
@@ -165,15 +165,17 @@ export function GalleryProvider({ children }) {
             const targetSlug = resolveCategorySlug(foto.categoria_slug, availableSlugs)
             if (!targetSlug || seen.has(targetSlug)) continue
             seen.add(targetSlug)
-            fotosPorCategoria[targetSlug] = [mapFoto({ ...foto, categoria_slug: targetSlug }, localMetricsRef.current)]
+            capasPorCategoria[targetSlug] = [mapFoto({ ...foto, categoria_slug: targetSlug }, localMetricsRef.current)]
           }
         }
       }
 
       if (!ativo) return
+
       setCategories(categoriasMapeadas)
+
       setPhotos((prev) => {
-        const next = { ...fotosPorCategoria }
+        const next = { ...capasPorCategoria }
         for (const slug of loadedRef.current) {
           if (prev[slug] && prev[slug].length > 0) {
             next[slug] = prev[slug]
@@ -199,22 +201,25 @@ export function GalleryProvider({ children }) {
     try {
       const normalizedId = normalizeSlug(categoryId)
 
-      const { data: allData, error } = await selectFotosWithPlaceholderFallback((cols) =>
+      const { data, error } = await selectFotosWithPlaceholderFallback((cols) =>
         supabase
           .from('fotos')
           .select(cols)
           .eq('ativo', true)
           .order('created_at', { ascending: false })
+          .limit(1000)
       )
 
-      if (!error && allData) {
-        const filtered = allData.filter(
+      if (!error && data) {
+        const filtered = data.filter(
           (foto) => normalizeSlug(foto.categoria_slug) === normalizedId
         )
+
         setPhotos((prev) => ({
           ...prev,
           [categoryId]: filtered.map((f) => mapFoto(f, localMetricsRef.current)),
         }))
+
         loadedRef.current.add(categoryId)
       }
     } finally {
