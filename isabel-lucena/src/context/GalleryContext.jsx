@@ -194,15 +194,14 @@ export function GalleryProvider({ children }) {
           .from('fotos')
           .select(cols)
           .eq('ativo', true)
+          .eq('categoria_slug', categoryId)
           .order('created_at', { ascending: false })
       )
 
       if (!error && data) {
-        const normalizedCategoryId = normalizeSlug(categoryId)
-        const filtered = data.filter((foto) => normalizeSlug(foto.categoria_slug) === normalizedCategoryId)
         setPhotos((prev) => ({
           ...prev,
-          [categoryId]: filtered.map((f) => mapFoto(f, localMetricsRef.current)),
+          [categoryId]: data.map((f) => mapFoto(f, localMetricsRef.current)),
         }))
         loadedRef.current.add(categoryId)
       }
