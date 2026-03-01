@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, Eye, Heart } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
@@ -18,8 +18,8 @@ export default function GalleryPage() {
   } = useGallery()
   const heroTextRef = useRef(null)
 
-  const category = categories.find(c => c.id === categoryId)
-  const categoryPhotos = photos[categoryId] || []
+  const category = useMemo(() => categories.find(c => c.id === categoryId), [categories, categoryId])
+  const categoryPhotos = useMemo(() => photos[categoryId] || [], [photos, categoryId])
   const loadingCategory = !!loadingPhotosByCategory[categoryId]
 
   useEffect(() => {
@@ -40,6 +40,23 @@ export default function GalleryPage() {
     return () => clearTimeout(timer)
   }, [categoryId])
 
+  const heroImage = useMemo(() => {
+    const heroCoverPhoto = categoryPhotos[0]
+    if (!heroCoverPhoto?.url) return null
+    return {
+      sources: getResponsiveImageSources(heroCoverPhoto.url, {
+        widths: [1024, 1600, 2048],
+        qualities: [72, 75, 80],
+        fallbackWidth: 2048,
+        fallbackQuality: 80,
+      }),
+      placeholder: heroCoverPhoto.placeholder
+    }
+  }, [categoryPhotos])
+
+  const totalViews = useMemo(() => categoryPhotos.reduce((s, p) => s + (p.views || 0), 0), [categoryPhotos])
+  const totalLikes = useMemo(() => categoryPhotos.reduce((s, p) => s + (p.likes || 0), 0), [categoryPhotos])
+
   if (!category) {
     return (
       <div className="min-h-screen bg-dark flex items-center justify-center">
@@ -54,37 +71,24 @@ export default function GalleryPage() {
     )
   }
 
-  const heroCoverPhoto = categoryPhotos[0]
-  const heroImage = heroCoverPhoto?.url
-    ? getResponsiveImageSources(heroCoverPhoto.url, {
-        widths: [1024, 1600, 2048],
-        qualities: [72, 75, 80],
-        fallbackWidth: 2048,
-        fallbackQuality: 80,
-      })
-    : null
-
-  const totalViews = categoryPhotos.reduce((s, p) => s + (p.views || 0), 0)
-  const totalLikes = categoryPhotos.reduce((s, p) => s + (p.likes || 0), 0)
-
   return (
     <div className="bg-dark min-h-screen">
       <section className="relative h-[45vh] md:h-[55vh] flex items-end overflow-hidden">
         {heroImage ? (
           <div className="absolute inset-0">
             <BlurImage
-              src={heroImage.src}
-              srcSet={heroImage.srcSet}
+              src={heroImage.sources.src}
+              srcSet={heroImage.sources.srcSet}
               sizes="100vw"
               alt={category.label}
-              placeholder={heroCoverPhoto?.placeholder}
+              placeholder={heroImage.placeholder}
               loading="eager"
               fetchPriority="high"
               decoding="async"
               className="w-full h-full object-cover opacity-50"
               onError={(event) => {
-                if (heroImage.fallbackSrc && event.currentTarget.src !== heroImage.fallbackSrc) {
-                  event.currentTarget.src = heroImage.fallbackSrc
+                if (heroImage.sources.fallbackSrc && event.currentTarget.src !== heroImage.sources.fallbackSrc) {
+                  event.currentTarget.src = heroImage.sources.fallbackSrc
                   event.currentTarget.srcset = ''
                 }
               }}

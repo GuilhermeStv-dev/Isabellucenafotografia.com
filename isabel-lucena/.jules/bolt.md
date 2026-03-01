@@ -1,0 +1,3 @@
+## 2025-05-22 - [Optimization of Gallery Context and Component Re-renders]
+**Learning:** React Context updates trigger re-renders in all consuming components. Unused derived state in context providers (like `allPhotos`) causes O(N) recalculations on every update (e.g., likes/views), which scales poorly with gallery size. Additionally, failing to memoize simple reductions (sum of likes/views) in leaf components leads to redundant O(N_category) work on every render cycle.
+**Action:** Remove unused derived state from context and use `useMemo` for any O(N) calculations in components that consume frequently updating context values. Wrap gallery components in `React.memo` to skip re-renders when unrelated context data changes.
