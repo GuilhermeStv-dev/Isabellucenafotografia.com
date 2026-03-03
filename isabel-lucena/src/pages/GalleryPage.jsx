@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, Eye, Heart } from 'lucide-react'
+import { ArrowLeft, Eye, Heart } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
 import GalleryGrid from '../components/GalleryGrid'
 import BlurImage from '../components/BlurImage'
@@ -45,11 +45,9 @@ export default function GalleryPage() {
       <div className="min-h-screen bg-dark flex items-center justify-center">
         <div className="text-center">
           <p className="text-white/40 mb-4">Categoria não encontrada.</p>
-          <Link to="/trabalhos" className="btn-outline inline-flex items-center gap-2 btn-arrow-hover">
-            Voltar
-            <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
-              <ArrowRight size={14} />
-            </span>
+          <Link to="/trabalhos" className="btn-outline min-h-[44px]">
+            <ArrowLeft size={14} />
+            Voltar aos trabalhos
           </Link>
         </div>
       </div>
@@ -115,9 +113,10 @@ export default function GalleryPage() {
         <div className="mb-8">
           <Link
             to="/trabalhos"
-            className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white transition-colors"
+            className="btn-outline min-h-[44px]"
           >
-            <ArrowLeft size={14} /> Voltar aos trabalhos
+            <ArrowLeft size={14} />
+            Voltar aos trabalhos
           </Link>
         </div>
 

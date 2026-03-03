@@ -37,22 +37,8 @@ export default function BlogPost() {
   }
 
   const handleInstagramShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: post?.titulo || 'Blog',
-          text: post?.excerpt || '',
-          url: currentUrl,
-        })
-        setShareFeedback('Compartilhamento aberto!')
-        setTimeout(() => setShareFeedback(''), 2500)
-        return
-      } catch {
-        // usuário cancelou ou dispositivo não concluiu
-      }
-    }
-
-    await copyLink('Link copiado! Cole no Instagram (story, bio ou direct).')
+    await copyLink('Link copiado! Cole no Direct do Instagram.')
+    window.open('https://www.instagram.com/direct/inbox/', '_blank', 'noopener,noreferrer')
   }
 
   useEffect(() => {
@@ -120,21 +106,16 @@ export default function BlogPost() {
           loading="eager"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/70 to-dark/30" />
-        
-        {/* Botão voltar */}
-        <Link
-          to="/blog"
-          className="absolute top-6 left-6 bg-black/40 backdrop-blur-sm hover:bg-black/60
-                     text-white px-4 py-2 rounded-full text-sm font-body flex items-center gap-2
-                     transition-all duration-300 z-10"
-        >
-          <ArrowLeft size={16} />
-          Voltar
-        </Link>
       </section>
 
       {/* Conteúdo do post */}
       <article className="max-w-4xl mx-auto px-6 -mt-32 relative z-10">
+        <div className="mb-6">
+          <Link to="/blog" className="btn-outline min-h-[44px]">
+            <ArrowLeft size={14} />
+            Voltar para o blog
+          </Link>
+        </div>
         
         {/* Card do post */}
         <div className="bg-dark-200 border border-dark-300 rounded-3xl p-8 md:p-12 shadow-2xl">
@@ -256,12 +237,12 @@ export default function BlogPost() {
             href="https://wa.me/5587988449536"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full
-                       bg-gold text-dark font-body font-semibold text-sm
-                       transition-all duration-300 hover:brightness-110 active:scale-95"
+            className="btn-gold min-h-[44px] btn-arrow-hover"
           >
             Falar no WhatsApp
-            <ArrowRight size={14} />
+            <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
+              <ArrowRight size={14} />
+            </span>
           </a>
         </div>
 

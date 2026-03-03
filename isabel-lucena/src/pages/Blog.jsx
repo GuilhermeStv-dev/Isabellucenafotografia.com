@@ -46,6 +46,15 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
+const getOptimizedAuthorPhoto = (url) => {
+  if (!url) return ''
+  if (!url.includes('/storage/v1/object/public/blog-images/')) return url
+
+  const baseUrl = url.replace('/storage/v1/object/public/blog-images/', '/storage/v1/render/image/public/blog-images/')
+  const separator = baseUrl.includes('?') ? '&' : '?'
+  return `${baseUrl}${separator}width=160&height=160&quality=100&resize=cover`
+}
+
 /* ═══════════════════════════════════════════════════
    BLOG CARD
 ═══════════════════════════════════════════════════ */
@@ -53,7 +62,7 @@ const formatDate = (dateString) => {
 function BlogCard({ post, delay }) {
   const authorName = post.blog_authors?.nome || 'Isabel Lucena Fotografia'
   const authorRole = post.blog_authors?.profissao || ''
-  const authorPhoto = post.blog_authors?.foto_url || ''
+  const authorPhoto = getOptimizedAuthorPhoto(post.blog_authors?.foto_url || '')
 
   return (
     <Link
@@ -61,7 +70,7 @@ function BlogCard({ post, delay }) {
       data-reveal
       style={revealStyle(delay)}
       className="group flex flex-col rounded-2xl overflow-hidden bg-dark-200 border border-dark-300
-                 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
+             transition-all duration-500 hover:scale-[1.02] hover:border-gold/60 hover:shadow-[0_8px_32px_rgba(0,0,0,0.5)]"
     >
       {/* Thumbnail */}
       <div className="relative overflow-hidden aspect-[4/3]">
@@ -95,10 +104,10 @@ function BlogCard({ post, delay }) {
             <img
               src={authorPhoto}
               alt={authorName}
-              className="w-8 h-8 rounded-full object-cover border border-gold/20 shrink-0"
+              className="w-10 h-10 rounded-full object-cover border border-white/20 group-hover:border-gold/70 transition-colors shrink-0"
             />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-dark-300 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-full bg-dark-300 border border-white/20 group-hover:border-gold/70 transition-colors flex items-center justify-center shrink-0">
               <User size={12} className="text-white/50" />
             </div>
           )}
