@@ -149,7 +149,7 @@ function LoginScreen({ onLogin }) {
           </div>
           {erro && <p className="font-body text-sm text-red-400 bg-red-400/10 rounded-lg px-4 py-2.5 mb-4">{erro}</p>}
           <button type="submit" disabled={loading}
-            className="w-full bg-gold text-dark font-body font-semibold text-sm py-3.5 rounded-xl hover:bg-gold-light hover:shadow-[0_4px_24px_rgba(201,169,110,0.4)] active:scale-[0.98] transition-all duration-300 disabled:opacity-50">
+            className="btn-gold w-full py-3.5 rounded-xl active:scale-[0.98]">
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
@@ -323,9 +323,7 @@ function AbaUpload({ categorias, onUploadConcluido }) {
           {categorias.map((cat) => (
             <button key={cat.slug} onClick={() => setCatSelecionada(cat.slug)}
               className={`px-4 py-2 rounded-full font-body text-sm border transition-all duration-200 active:scale-95
-                ${catSelecionada === cat.slug
-                  ? 'bg-gold text-dark border-gold font-semibold shadow-[0_4px_16px_rgba(201,169,110,0.35)]'
-                  : 'border-dark-300 text-white/60 hover:border-gold/40 hover:text-white'}`}>
+                ${catSelecionada === cat.slug ? 'btn-gold' : 'btn-outline'}`}>
               {cat.nome}
             </button>
           ))}
@@ -541,17 +539,13 @@ function AbaFotos({ categorias }) {
             className={`px-4 py-2 rounded-full font-body text-sm border transition-all duration-200 active:scale-95
               ${catSelecionada === '__all__'
                 ? 'bg-gold text-dark border-gold font-semibold'
-                : 'border-dark-300 text-white/60 hover:border-gold/40 hover:text-white'}`}>
+                : 'border-dark-300 text-whit ? 'btn-gold' : 'btn-outline'}`}>
             Todas
           </button>
           {categorias.map((cat) => (
             <button key={cat.slug} onClick={() => setCatSelecionada(cat.slug)}
               className={`px-4 py-2 rounded-full font-body text-sm border transition-all duration-200 active:scale-95
-                ${catSelecionada === cat.slug
-                  ? 'bg-gold text-dark border-gold font-semibold'
-                  : 'border-dark-300 text-white/60 hover:border-gold/40 hover:text-white'}`}>
-              {cat.nome}
-            </button>
+                ${catSelecionada === cat.slug ? 'btn-gold' : 'btn-outlin
           ))}
         </div>
       </div>
@@ -675,7 +669,7 @@ function AbaCategorias({ categorias, onAtualizar }) {
             className="flex-1 bg-dark-200 border border-dark-300 rounded-xl px-4 py-3 font-body text-sm text-white placeholder-white/20 focus:outline-none focus:border-gold/60 transition-colors"
             onKeyDown={(e) => e.key === 'Enter' && criar()} />
           <button onClick={criar} disabled={!novoNome.trim() || criando}
-            className="px-5 py-3 bg-gold text-dark font-body font-semibold text-sm rounded-xl hover:bg-gold-light hover:shadow-[0_4px_20px_rgba(201,169,110,0.3)] active:scale-95 transition-all duration-300 disabled:opacity-40 flex items-center gap-2">
+            className="btn-gold px-5 py-3 rounded-xl flex items-center gap-2">
             <Icon.Plus /> Criar
           </button>
         </div>
