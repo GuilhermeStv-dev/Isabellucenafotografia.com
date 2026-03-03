@@ -292,21 +292,18 @@ export function GalleryProvider({ children }) {
     }
   }, [])
 
-  const allPhotos = useMemo(
-    () => Object.entries(photos).flatMap(([catId, arr]) =>
-      arr.map((p) => ({ ...p, categoryId: catId }))
-    ),
-    [photos]
-  )
-
+  // ⚡ Bolt Optimization:
+  // Removed `allPhotos` derived state which was performing O(N_total) object creation
+  // and array flattening on every metrics update (likes/views).
+  // Verified that no components in the codebase consume `allPhotos` from this context.
   const value = useMemo(() => ({
-    categories, photos, allPhotos, loadingPhotosByCategory,
+    categories, photos, loadingPhotosByCategory,
     addCategory, removeCategory, updateCategory,
     addPhoto, removePhoto, reorderPhotos, setCoverPhoto,
     incrementPhotoViews, togglePhotoLike,
     ensureCategoryPhotosLoaded,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [categories, photos, allPhotos, loadingPhotosByCategory, ensureCategoryPhotosLoaded, incrementPhotoViews, togglePhotoLike])
+  }), [categories, photos, loadingPhotosByCategory, ensureCategoryPhotosLoaded, incrementPhotoViews, togglePhotoLike])
 
   return (
     <GalleryContext.Provider value={value}>
