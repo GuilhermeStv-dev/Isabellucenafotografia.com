@@ -4,6 +4,7 @@ import { supabase, supabaseAnonRead, uploadFoto, deleteFotoStorage } from '../li
 import { compressImage, runWithConcurrency } from '../lib/imageUtils';
 import { generatePlaceholder } from '../lib/generatePlaceholder';
 import RichEditor from '../components/RichEditor';
+import Toast from '../components/Toast';
 import LogoBranca from '../assets/Logo-horzontal-branca.webp';
 
 const Icon = {
@@ -215,6 +216,12 @@ function AbaUpload({ categorias, onUploadConcluido }) {
   const [catSelecionada, setCatSelecionada] = useState('');
   const [filas, setFilas] = useState([]);
   const [fazendoUpload, setFazendoUpload] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = useCallback((message, type = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
 
   const isMissingPlaceholderColumnError = useCallback((error) => {
     const text = `${error?.message || ''} ${error?.details || ''}`.toLowerCase();
@@ -247,11 +254,13 @@ function AbaUpload({ categorias, onUploadConcluido }) {
   }, []);
 
   const enviarTudo = async () => {
-    if (!catSelecionada) { alert('Selecione uma categoria antes de enviar.'); return; }
+    if (!catSelecionada) { showToast('Selecione uma categoria antes de enviar.', 'info'); return; }
     const pendentes = filas.filter((f) => f.status === 'aguardando');
-    if (!pendentes.length) { alert('Adicione pelo menos uma foto.'); return; }
+    if (!pendentes.length) { showToast('Adicione pelo menos uma foto.', 'info'); return; }
 
     setFazendoUpload(true);
+    let enviadosComSucesso = 0;
+    let enviadosComErro = 0;
 
     const tasks = pendentes.map((item) => async () => {
       setItemStatus(item.id, { status: 'enviando' });
@@ -292,14 +301,28 @@ function AbaUpload({ categorias, onUploadConcluido }) {
         if (error) throw error;
 
         setItemStatus(item.id, { status: 'ok' });
+        enviadosComSucesso += 1;
       } catch (err) {
         setItemStatus(item.id, { status: 'erro', erro: err?.message ?? 'Erro desconhecido' });
+        enviadosComErro += 1;
       }
     });
 
     await runWithConcurrency(tasks, 3);
     setFazendoUpload(false);
     onUploadConcluido?.();
+
+    if (enviadosComErro === 0) {
+      showToast(`${enviadosComSucesso} foto${enviadosComSucesso !== 1 ? 's' : ''} enviada${enviadosComSucesso !== 1 ? 's' : ''} com sucesso!`, 'success');
+      return;
+    }
+
+    if (enviadosComSucesso > 0) {
+      showToast(`${enviadosComSucesso} enviada${enviadosComSucesso !== 1 ? 's' : ''} e ${enviadosComErro} com erro.`, 'info');
+      return;
+    }
+
+    showToast(`Não foi possível enviar as fotos. ${enviadosComErro} item${enviadosComErro !== 1 ? 'ns' : ''} com erro.`, 'error');
   };
 
   const pendentes = filas.filter((f) => f.status === 'aguardando');
@@ -314,6 +337,13 @@ function AbaUpload({ categorias, onUploadConcluido }) {
 
   return (
     <div className="flex flex-col gap-6">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       <div>
         <h2 className="font-display text-2xl text-white mb-1">Adicionar fotos</h2>
         <p className="font-body text-sm text-white/40">
@@ -740,6 +770,12 @@ function AbaAutoresModal({ isOpen, onClose, onAuthorAdded, editingAuthor = null 
   const [uploadingFoto, setUploadingFoto] = useState(false);
   const fileInputRef = useRef(null);
 
+  const [toast, setToast] = useState(null);
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   const [formData, setFormData] = useState({
     nome: editingAuthor?.nome || '',
     profissao: editingAuthor?.profissao || '',
@@ -767,7 +803,7 @@ function AbaAutoresModal({ isOpen, onClose, onAuthorAdded, editingAuthor = null 
 
       return publicUrl.publicUrl;
     } catch (err) {
-      alert('Erro ao fazer upload: ' + err.message);
+      showToast('Erro ao fazer upload: ' + err.message, 'error');
       return null;
     } finally {
       setUploadingFoto(false);
@@ -790,7 +826,7 @@ function AbaAutoresModal({ isOpen, onClose, onAuthorAdded, editingAuthor = null 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.nome.trim()) {
-      alert('Nome é obrigatório');
+      showToast('Nome é obrigatório', 'error');
       return;
     }
 
@@ -807,19 +843,19 @@ function AbaAutoresModal({ isOpen, onClose, onAuthorAdded, editingAuthor = null 
           .update(dataToSave)
           .eq('id', editingAuthor.id);
         if (error) throw error;
-        alert('Autor atualizado!');
+        showToast('Autor atualizado!', 'success');
       } else {
         const { error } = await supabase
           .from('blog_authors')
           .insert(dataToSave);
         if (error) throw error;
-        alert('Autor criado!');
+        showToast('Autor criado!', 'success');
       }
 
       onAuthorAdded?.();
       onClose();
     } catch (err) {
-      alert('Erro: ' + err.message);
+      showToast('Erro: ' + err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -829,6 +865,13 @@ function AbaAutoresModal({ isOpen, onClose, onAuthorAdded, editingAuthor = null 
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       <div className="bg-dark-200 border border-dark-300 rounded-2xl p-6 max-w-2xl w-full my-8">
         <h3 className="font-display text-2xl text-white mb-6">
           {editingAuthor ? 'Editar Autor' : 'Novo Autor'}
@@ -871,7 +914,7 @@ function AbaAutoresModal({ isOpen, onClose, onAuthorAdded, editingAuthor = null 
 
           {/* Nome */}
           <div>
-            <label className="block font-body text-sm text-white/70 mb-2">Nome *</label>
+            <label className="block font-body text-sm text-white/70 mb-2">Nome</label>
             <input
               type="text"
               value={formData.nome}
@@ -967,12 +1010,17 @@ function AbaBlog() {
   const [uploadingCapa, setUploadingCapa] = useState(false);
   const fileInputCapaRef = useRef(null);
 
+  const [toast, setToast] = useState(null);
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   const [formData, setFormData] = useState({
     titulo: '',
     excerpt: '',
     conteudo: '',
-    autor_id: '',
-    ativo: true
+    autor_id: ''
   });
 
   const gerarSlug = (titulo) => {
@@ -994,7 +1042,7 @@ function AbaBlog() {
       if (error) throw error;
       setPosts(data || []);
     } catch (err) {
-      alert('Erro ao carregar posts: ' + err.message);
+      showToast('Erro ao carregar posts: ' + err.message, 'error');
     }
   };
 
@@ -1008,7 +1056,7 @@ function AbaBlog() {
       if (error) throw error;
       setAutores(data || []);
     } catch (err) {
-      alert('Erro ao carregar autores: ' + err.message);
+      showToast('Erro ao carregar autores: ' + err.message, 'error');
     }
   };
 
@@ -1035,7 +1083,7 @@ function AbaBlog() {
 
       return publicUrl.publicUrl;
     } catch (err) {
-      alert('Erro ao fazer upload: ' + err.message);
+      showToast('Erro ao fazer upload: ' + err.message, 'error');
       return null;
     } finally {
       setUploadingCapa(false);
@@ -1060,8 +1108,7 @@ function AbaBlog() {
       titulo: '',
       excerpt: '',
       conteudo: '',
-      autor_id: '',
-      ativo: true
+      autor_id: ''
     });
     setImagemCapaUrl('');
     setImagemCapaPreview('');
@@ -1069,11 +1116,9 @@ function AbaBlog() {
     setMostrarForm(false);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+  const salvarPost = async (publicar = true) => {
     if (!formData.titulo || !formData.excerpt || !formData.conteudo || !imagemCapaUrl) {
-      alert('Preencha todos os campos obrigatórios (incluindo imagem de capa).');
+      showToast('Preencha todos os campos obrigatórios (incluindo imagem de capa).', 'error');
       return;
     }
 
@@ -1085,7 +1130,7 @@ function AbaBlog() {
       conteudo: formData.conteudo,
       imagem_capa: imagemCapaUrl,
       autor_id: formData.autor_id || null,
-      ativo: formData.ativo
+      ativo: publicar
     };
 
     try {
@@ -1096,20 +1141,21 @@ function AbaBlog() {
           .eq('id', editando);
 
         if (error) throw error;
-        alert('Post atualizado com sucesso!');
+        showToast('Post atualizado com sucesso!', 'success');
       } else {
         const { error } = await supabase
           .from('blog_posts')
           .insert(dataToSave);
 
         if (error) throw error;
-        alert('Post criado com sucesso!');
+        const msgSucesso = publicar ? 'Post publicado com sucesso!' : 'Post salvo como rascunho!';
+        showToast(msgSucesso, 'success');
       }
 
       resetForm();
       carregarPosts();
     } catch (err) {
-      alert('Erro ao salvar post: ' + err.message);
+      showToast('Erro ao salvar post: ' + err.message, 'error');
     }
   };
 
@@ -1118,8 +1164,7 @@ function AbaBlog() {
       titulo: post.titulo,
       excerpt: post.excerpt,
       conteudo: post.conteudo,
-      autor_id: post.autor_id || '',
-      ativo: post.ativo
+      autor_id: post.autor_id || ''
     });
     setImagemCapaUrl(post.imagem_capa);
     setImagemCapaPreview(post.imagem_capa);
@@ -1135,7 +1180,7 @@ function AbaBlog() {
         .eq('id', post.id);
       carregarPosts();
     } catch (err) {
-      alert('Erro: ' + err.message);
+      showToast('Erro: ' + err.message, 'error');
     }
   };
 
@@ -1144,10 +1189,10 @@ function AbaBlog() {
 
     try {
       await supabase.from('blog_posts').delete().eq('id', post.id);
-      alert('Post excluído!');
+      showToast('Post excluído!', 'success');
       carregarPosts();
     } catch (err) {
-      alert('Erro: ' + err.message);
+      showToast('Erro: ' + err.message, 'error');
     }
   };
 
@@ -1156,10 +1201,10 @@ function AbaBlog() {
 
     try {
       await supabase.from('blog_authors').delete().eq('id', author.id);
-      alert('Autor excluído!');
+      showToast('Autor excluído!', 'success');
       carregarAutores();
     } catch (err) {
-      alert('Erro: ' + err.message);
+      showToast('Erro: ' + err.message, 'error');
     }
   };
 
@@ -1169,6 +1214,13 @@ function AbaBlog() {
 
   return (
     <div className="max-w-7xl space-y-6">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
       {/* Tabs */}
       <div className="flex gap-4 border-b border-dark-300">
         <button
@@ -1213,14 +1265,14 @@ function AbaBlog() {
 
           {/* Formulário */}
           {mostrarForm && (
-            <form onSubmit={handleSubmit} className="bg-dark-200 border border-dark-300 rounded-2xl p-8 space-y-6">
+            <form onSubmit={(e) => { e.preventDefault(); }} className="bg-dark-200 border border-dark-300 rounded-2xl p-8 space-y-6">
               <h3 className="font-display text-2xl text-white">
                 {editando ? 'Editar Post' : 'Criar Novo Post'}
               </h3>
 
               {/* Título */}
               <div>
-                <label className="block font-body text-sm text-white/70 mb-2">Título do Post *</label>
+                <label className="block font-body text-sm text-white/70 mb-2">Título do Post</label>
                 <input
                   type="text"
                   value={formData.titulo}
@@ -1230,14 +1282,11 @@ function AbaBlog() {
                              font-body text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50"
                   required
                 />
-                <p className="text-xs text-white/40 mt-2">
-                  URL: <strong>/blog/{gerarSlug(formData.titulo) || 'titulo-do-post'}</strong>
-                </p>
               </div>
 
               {/* Resumo */}
               <div>
-                <label className="block font-body text-sm text-white/70 mb-2">Resumo (Excerpt) *</label>
+                <label className="block font-body text-sm text-white/70 mb-2">Resumo (Excerpt)</label>
                 <textarea
                   value={formData.excerpt}
                   onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
@@ -1253,7 +1302,7 @@ function AbaBlog() {
 
               {/* Imagem de Capa */}
               <div>
-                <label className="block font-body text-sm text-white/70 mb-3">Imagem de Capa *</label>
+                <label className="block font-body text-sm text-white/70 mb-3">Imagem de Capa</label>
                 <div className="flex gap-4 items-start">
                   <div className="flex-1">
                     <input
@@ -1268,11 +1317,20 @@ function AbaBlog() {
                       type="button"
                       onClick={() => fileInputCapaRef.current?.click()}
                       disabled={uploadingCapa}
-                      className="block w-full px-6 py-4 rounded-xl border-2 border-dashed border-white/20
+                      className="w-full px-6 py-4 rounded-xl border-2 border-dashed border-white/20
                                  text-white/60 font-body text-sm hover:border-gold/50 hover:text-gold transition-colors
-                                 disabled:opacity-50"
+                                 disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                      {uploadingCapa ? '📤 Enviando...' : '📤 Clique para escolher ou arraste uma imagem'}
+                      {uploadingCapa ? (
+                        <>
+                          <span>Enviando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Icon.Upload size={20} />
+                          Clique para escolher ou arraste uma imagem
+                        </>
+                      )}
                     </button>
                   </div>
                   {imagemCapaPreview && (
@@ -1285,7 +1343,7 @@ function AbaBlog() {
 
               {/* Conteúdo com Editor Visual */}
               <div>
-                <label className="block font-body text-sm text-white/70 mb-2">Conteúdo do Post *</label>
+                <label className="block font-body text-sm text-white/70 mb-2">Conteúdo do Post</label>
                 <RichEditor
                   value={formData.conteudo}
                   onChange={(html) => setFormData({ ...formData, conteudo: html })}
@@ -1323,36 +1381,33 @@ function AbaBlog() {
                 )}
               </div>
 
-              {/* Ativo */}
-              <div className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  id="post-ativo"
-                  checked={formData.ativo}
-                  onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
-                  className="w-4 h-4 accent-gold"
-                />
-                <label htmlFor="post-ativo" className="font-body text-sm text-white/70 cursor-pointer">
-                  Publicar post (se não marcar, fica como rascunho)
-                </label>
-              </div>
-
-              {/* Botões */}
+              {/* Botões de Ação */}
               <div className="flex gap-3 pt-6 border-t border-dark-300">
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={() => salvarPost(true)}
                   disabled={uploadingCapa}
-                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gold text-dark font-body font-semibold text-sm
-                             hover:brightness-110 transition-all disabled:opacity-50"
+                  className="flex-1 px-6 py-3 rounded-xl bg-gold text-dark font-body font-semibold text-sm
+                             hover:brightness-110 transition-all disabled:opacity-50 active:scale-95"
                 >
-                  <Icon.Check />
-                  {editando ? 'Atualizar Post' : 'Publicar Post'}
+                  <Icon.Check size={18} className="inline mr-2" />
+                  Publicar Post
+                </button>
+                <button
+                  type="button"
+                  onClick={() => salvarPost(false)}
+                  disabled={uploadingCapa}
+                  className="flex-1 px-6 py-3 rounded-xl border-2 border-white/20 text-white/70 font-body font-semibold text-sm
+                             hover:border-gold/50 hover:text-gold transition-all disabled:opacity-50 active:scale-95"
+                >
+                  <Icon.FileText size={18} className="inline mr-2" />
+                  Salvar como Rascunho
                 </button>
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-6 py-3 rounded-xl border border-white/20 text-white/70 font-body text-sm
-                             hover:border-white/40 hover:text-white transition-all"
+                  className="flex-1 px-6 py-3 rounded-xl border-2 border-white/20 text-white/70 font-body font-semibold text-sm
+                             hover:border-white/40 hover:text-white transition-all active:scale-95"
                 >
                   Cancelar
                 </button>

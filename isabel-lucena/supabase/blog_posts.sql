@@ -26,27 +26,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER trigger_update_blog_posts_updated_at
-  BEFORE UPDATE ON blog_posts
-  FOR EACH ROW
-  EXECUTE FUNCTION update_blog_posts_updated_at();
-
 -- Políticas RLS (Row Level Security)
-ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE blog_posts ENABLE ROW LEVEL SECURITY;
 
 -- Permitir leitura pública de posts ativos
-CREATE POLICY "Posts ativos são públicos"
-  ON blog_posts
-  FOR SELECT
-  USING (ativo = true);
+-- CREATE POLICY "Posts ativos são públicos"
+--   ON blog_posts
+--   FOR SELECT
+--   USING (ativo = true);
 
 -- Permitir todas as operações para usuários autenticados
-CREATE POLICY "Usuários autenticados podem gerenciar posts"
-  ON blog_posts
-  FOR ALL
-  TO authenticated
-  USING (true)
-  WITH CHECK (true);
+-- CREATE POLICY "Usuários autenticados podem gerenciar posts"
+--   ON blog_posts
+--   FOR ALL
+--   TO authenticated
+--   USING (true)
+--   WITH CHECK (true);
 
 -- Comentários na tabela
 COMMENT ON TABLE blog_posts IS 'Armazena os posts do blog';

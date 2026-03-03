@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
+import { Heading2, Heading3, Type, List, ListOrdered, Link2, Image } from 'lucide-react'
 
 const RichEditor = ({ value, onChange, placeholder = "Escreva o conteúdo do seu post aqui..." }) => {
   const editorRef = useRef(null)
-  const [showFormatMenu, setShowFormatMenu] = useState(false)
 
   const applyFormatting = (command, arg = null) => {
     document.execCommand(command, false, arg)
@@ -38,90 +38,90 @@ const RichEditor = ({ value, onChange, placeholder = "Escreva o conteúdo do seu
   return (
     <div className="space-y-2">
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-1 p-3 bg-dark-300 rounded-t-xl border border-white/10 border-b-0">
+      <div className="flex flex-wrap gap-2 p-4 bg-dark-300 rounded-t-xl border border-white/10 border-b-0">
         {/* Format styles */}
-        <div className="flex gap-1 border-r border-white/10 pr-2">
+        <div className="flex gap-2 border-r border-white/20 pr-3">
           <button
             onClick={() => applyFormatting('formatBlock', '<h2>')}
-            className="px-3 py-1.5 text-xs font-bold bg-dark-200 text-white/70 hover:bg-dark-100 hover:text-white rounded transition-colors"
-            title="Título grande"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-dark-200 text-white/70 hover:bg-gold hover:text-dark rounded-lg transition-colors"
+            title="Título Grande"
           >
-            H2
+            <Heading2 size={16} />
+            Grande
           </button>
           <button
             onClick={() => applyFormatting('formatBlock', '<h3>')}
-            className="px-3 py-1.5 text-xs font-bold bg-dark-200 text-white/70 hover:bg-dark-100 hover:text-white rounded transition-colors"
-            title="Título médio"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-dark-200 text-white/70 hover:bg-gold hover:text-dark rounded-lg transition-colors"
+            title="Título Médio"
           >
-            H3
+            <Heading3 size={16} />
+            Médio
           </button>
           <button
             onClick={() => applyFormatting('formatBlock', '<p>')}
-            className="px-3 py-1.5 text-xs bg-dark-200 text-white/70 hover:bg-dark-100 hover:text-white rounded transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs bg-dark-200 text-white/70 hover:bg-gold hover:text-dark rounded-lg transition-colors"
             title="Parágrafo"
           >
-            P
+            <Type size={16} />
+            Texto
           </button>
         </div>
 
         {/* Text formatting */}
-        <div className="flex gap-1 border-r border-white/10 pr-2">
+        <div className="flex gap-2 border-r border-white/20 pr-3">
           <button
             onClick={() => applyFormatting('bold')}
-            className="px-3 py-1.5 text-xs font-bold bg-dark-200 text-white/70 hover:bg-dark-100 hover:text-gold rounded transition-colors"
+            className="px-3 py-2 text-xs font-bold bg-dark-200 text-white/70 hover:bg-gold hover:text-dark rounded-lg transition-colors"
             title="Negrito (Ctrl+B)"
           >
-            B
+            Negrito
           </button>
           <button
             onClick={() => applyFormatting('italic')}
-            className="px-3 py-1.5 text-xs italic bg-dark-200 text-white/70 hover:bg-dark-100 hover:text-gold rounded transition-colors"
+            className="px-3 py-2 text-xs italic bg-dark-200 text-white/70 hover:bg-gold hover:text-dark rounded-lg transition-colors"
             title="Itálico (Ctrl+I)"
           >
-            I
-          </button>
-          <button
-            onClick={() => applyFormatting('underline')}
-            className="px-3 py-1.5 text-xs underline bg-dark-200 text-white/70 hover:bg-dark-100 hover:text-gold rounded transition-colors"
-            title="Sublinhado (Ctrl+U)"
-          >
-            U
+            Itálico
           </button>
         </div>
 
         {/* Lists */}
-        <div className="flex gap-1 border-r border-white/10 pr-2">
+        <div className="flex gap-2 border-r border-white/20 pr-3">
           <button
             onClick={() => applyFormatting('insertUnorderedList')}
-            className="px-3 py-1.5 text-xs bg-dark-200 text-white/70 hover:bg-dark-100 hover:text-white rounded transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs bg-dark-200 text-white/70 hover:bg-gold hover:text-dark rounded-lg transition-colors"
             title="Lista com pontos"
           >
-            • Lista
+            <List size={16} />
+            Pontos
           </button>
           <button
             onClick={() => applyFormatting('insertOrderedList')}
-            className="px-3 py-1.5 text-xs bg-dark-200 text-white/70 hover:bg-dark-100 hover:text-white rounded transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs bg-dark-200 text-white/70 hover:bg-gold hover:text-dark rounded-lg transition-colors"
             title="Lista numerada"
           >
-            1. Lista
+            <ListOrdered size={16} />
+            Número
           </button>
         </div>
 
         {/* Links and media */}
-        <div className="flex gap-1">
+        <div className="flex gap-2">
           <button
             onClick={insertLink}
-            className="px-3 py-1.5 text-xs bg-dark-200 text-white/70 hover:bg-dark-100 hover:text-gold rounded transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs bg-dark-200 text-white/70 hover:bg-gold hover:text-dark rounded-lg transition-colors"
             title="Inserir link"
           >
-            🔗 Link
+            <Link2 size={16} />
+            Link
           </button>
           <button
             onClick={insertImage}
-            className="px-3 py-1.5 text-xs bg-dark-200 text-white/70 hover:bg-dark-100 hover:text-gold rounded transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 text-xs bg-dark-200 text-white/70 hover:bg-gold hover:text-dark rounded-lg transition-colors"
             title="Inserir imagem"
           >
-            🖼️ Imagem
+            <Image size={16} />
+            Imagem
           </button>
         </div>
       </div>
@@ -152,10 +152,11 @@ const RichEditor = ({ value, onChange, placeholder = "Escreva o conteúdo do seu
 
       {/* Dica */}
       <p className="text-xs text-white/40 font-body">
-        Use os botões acima para formatar seu texto. Pressione Enter para nova linha.
+        Use os botões acima para formatar seu texto. Clique em "Imagem" para adicionar fotos.
       </p>
     </div>
   )
 }
 
 export default RichEditor
+
