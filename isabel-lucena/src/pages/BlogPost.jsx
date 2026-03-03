@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Calendar, User, ArrowRight } from 'lucide-react'
+import { ArrowLeft, Calendar, User, ArrowRight, MessageCircle, Instagram, Copy, Check } from 'lucide-react'
 import { supabaseAnonRead } from '../lib/supabase'
 
 const formatDate = (dateString) => {
@@ -18,6 +18,28 @@ export default function BlogPost() {
   const [post, setPost] = useState(null)
   const [loading, setLoading] = useState(true)
   const [relatedPosts, setRelatedPosts] = useState([])
+  const [shareFeedback, setShareFeedback] = useState('')
+
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : ''
+  const shareText = post ? `${post.titulo} - ${currentUrl}` : currentUrl
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`
+
+  const copyLink = async (message = 'Link copiado!') => {
+    if (!currentUrl) return
+    try {
+      await navigator.clipboard.writeText(currentUrl)
+      setShareFeedback(message)
+      setTimeout(() => setShareFeedback(''), 2500)
+    } catch {
+      setShareFeedback('Não foi possível copiar o link.')
+      setTimeout(() => setShareFeedback(''), 2500)
+    }
+  }
+
+  const handleInstagramShare = async () => {
+    await copyLink('Link copiado! Cole no Instagram.')
+    window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer')
+  }
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -126,6 +148,44 @@ export default function BlogPost() {
           <p className="font-body text-lg text-white/70 leading-relaxed mb-8 pb-8 border-b border-dark-300">
             {post.excerpt}
           </p>
+
+          {/* Compartilhar */}
+          <div className="mb-8 pb-8 border-b border-dark-300">
+            <p className="font-body text-xs text-white/50 tracking-widest uppercase mb-3">Compartilhar</p>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-gold min-h-[42px]"
+              >
+                <MessageCircle size={14} />
+                WhatsApp
+              </a>
+              <button
+                type="button"
+                onClick={handleInstagramShare}
+                className="btn-outline min-h-[42px]"
+              >
+                <Instagram size={14} />
+                Instagram
+              </button>
+              <button
+                type="button"
+                onClick={() => copyLink('Link copiado com sucesso!')}
+                className="btn-outline min-h-[42px]"
+              >
+                <Copy size={14} />
+                Copiar link
+              </button>
+            </div>
+            {shareFeedback && (
+              <p className="font-body text-xs text-gold mt-3 inline-flex items-center gap-1.5">
+                <Check size={12} />
+                {shareFeedback}
+              </p>
+            )}
+          </div>
 
           {/* Conteúdo HTML */}
           <div 

@@ -1,8 +1,12 @@
 import { useRef, useState } from 'react'
 import { Heading2, Heading3, Type, List, ListOrdered, Link2, Image } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 
 const RichEditor = ({ value, onChange, placeholder = "Escreva o conteúdo do seu post aqui..." }) => {
   const editorRef = useRef(null)
+  const imageInputRef = useRef(null)
+  const selectionRangeRef = useRef(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const applyFormatting = (command, arg = null) => {
     document.execCommand(command, false, arg)
@@ -16,10 +20,60 @@ const RichEditor = ({ value, onChange, placeholder = "Escreva o conteúdo do seu
     }
   }
 
+  const saveSelectionRange = () => {
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+    selectionRangeRef.current = selection.getRangeAt(0).cloneRange()
+  }
+
+  const restoreSelectionRange = () => {
+    const selection = window.getSelection()
+    if (!selection || !selectionRangeRef.current) return
+    selection.removeAllRanges()
+    selection.addRange(selectionRangeRef.current)
+  }
+
+  const uploadImageToBlog = async (file) => {
+    const ext = file.name.split('.').pop()
+    const fileName = `post-content-${Date.now()}-${Math.floor(Math.random() * 1e6)}.${ext}`
+
+    const { error } = await supabase.storage
+      .from('blog-images')
+      .upload(`content/${fileName}`, file)
+
+    if (error) throw error
+
+    const { data } = supabase.storage
+      .from('blog-images')
+      .getPublicUrl(`content/${fileName}`)
+
+    return data.publicUrl
+  }
+
   const insertImage = () => {
-    const url = prompt('Digite a URL da imagem:')
-    if (url) {
-      applyFormatting('insertImage', url)
+    saveSelectionRange()
+    imageInputRef.current?.click()
+  }
+
+  const handleImageFileChange = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      setUploadingImage(true)
+      const imageUrl = await uploadImageToBlog(file)
+      editorRef.current?.focus()
+      restoreSelectionRange()
+      applyFormatting('insertImage', imageUrl)
+      if (editorRef.current) {
+        onChange(editorRef.current.innerHTML)
+      }
+    } catch (error) {
+      console.error('Erro ao enviar imagem no editor:', error)
+    } finally {
+      setUploadingImage(false)
+      e.target.value = ''
+      selectionRangeRef.current = null
     }
   }
 
@@ -37,6 +91,13 @@ const RichEditor = ({ value, onChange, placeholder = "Escreva o conteúdo do seu
 
   return (
     <div className="space-y-2">
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleImageFileChange}
+      />
       {/* Toolbar */}
       <div className="flex flex-wrap gap-2 p-4 bg-dark-300 rounded-t-xl border border-white/10 border-b-0">
         {/* Format styles */}
@@ -117,11 +178,12 @@ const RichEditor = ({ value, onChange, placeholder = "Escreva o conteúdo do seu
           </button>
           <button
             onClick={insertImage}
+            disabled={uploadingImage}
             className="flex items-center gap-1.5 px-3 py-2 text-xs bg-dark-200 text-white/70 hover:bg-gold hover:text-dark rounded-lg transition-colors"
             title="Inserir imagem"
           >
             <Image size={16} />
-            Imagem
+            {uploadingImage ? 'Enviando...' : 'Imagem'}
           </button>
         </div>
       </div>
