@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, ArrowRight, User } from 'lucide-react'
+import { Search, ArrowRight, User, Calendar } from 'lucide-react'
+import { supabaseAnonRead } from '../lib/supabase'
 import FotoIsabel from '../assets/foto-isabel.webp'
 import FotoIsabel2 from '../assets/Foto-isabel-2.webp'
 import FotoIsabel3 from '../assets/Foto-isabel3.webp'
-import FotoIsabel4 from '../assets/Foto-Isabel4.webp'
-import FotoGravida from '../assets/foto-gravida1.webp'
+import trabalhoContainer from '../assets/trabalho-container.webp'
 
 /* ═══════════════════════════════════════════════════
    HOOKS
@@ -41,48 +41,10 @@ const revealStyle = (delay = 0) => ({
                transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94) ${delay}ms`,
 })
 
-/* ═══════════════════════════════════════════════════
-   STATIC DATA
-═══════════════════════════════════════════════════ */
-
-const BLOG_POSTS = [
-  {
-    id: 1,
-    title: 'Motivos para fazer um ensaio comigo',
-    excerpt:
-      'Se você está buscando uma maneira de eternizar momentos únicos com autenticidade e sensibilidade, um ensaio fotográfico personalizado é a escolha certa...',
-    date: '20/12/24',
-    image: FotoIsabel,
-    author: 'Isabel Lucena Fotografia',
-  },
-  {
-    id: 2,
-    title: 'Como se preparar para o seu ensaio gestante',
-    excerpt:
-      'A gestação é uma das fases mais especiais da vida. Separei dicas essenciais de roupa, postura e local para você arrasar nas fotos e guardar essa memória...',
-    date: '10/11/24',
-    image: FotoGravida,
-    author: 'Isabel Lucena Fotografia',
-  },
-  {
-    id: 3,
-    title: 'Os melhores locais para ensaios ao ar livre em Petrolina',
-    excerpt:
-      'Petrolina tem cenários incríveis para ensaios externos. Conheça os meus lugares favoritos e como aproveitar a luz natural do sertão para fotos deslumbrantes...',
-    date: '05/10/24',
-    image: FotoIsabel2,
-    author: 'Isabel Lucena Fotografia',
-  },
-  {
-    id: 4,
-    title: 'Por que investir em fotografia profissional para sua família',
-    excerpt:
-      'Fotos de família são um patrimônio afetivo que atravessa gerações. Descubra por que contratar uma fotógrafa profissional faz toda a diferença no resultado final...',
-    date: '18/09/24',
-    image: FotoIsabel4,
-    author: 'Isabel Lucena Fotografia',
-  },
-]
+const formatDate = (dateString) => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
 
 /* ═══════════════════════════════════════════════════
    BLOG CARD
@@ -90,7 +52,8 @@ const BLOG_POSTS = [
 
 function BlogCard({ post, delay }) {
   return (
-    <article
+    <Link
+      to={`/blog/${post.slug}`}
       data-reveal
       style={revealStyle(delay)}
       className="group flex flex-col rounded-2xl overflow-hidden bg-dark-200 border border-dark-300
@@ -99,25 +62,26 @@ function BlogCard({ post, delay }) {
       {/* Thumbnail */}
       <div className="relative overflow-hidden aspect-[4/3]">
         <img
-          src={post.image}
-          alt={post.title}
+          src={post.imagem_capa}
+          alt={post.titulo}
           loading="lazy"
           decoding="async"
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
         />
         {/* Date badge */}
         <span className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white text-[10px]
-                         font-body px-2 py-1 rounded-full">
-          {post.date}
+                         font-body px-2 py-1 rounded-full flex items-center gap-1">
+          <Calendar size={10} />
+          {formatDate(post.created_at)}
         </span>
       </div>
 
       {/* Content */}
       <div className="flex flex-col flex-1 p-4 gap-2">
-        <h3 className="font-body font-bold text-white text-sm leading-snug">
-          {post.title}
+        <h3 className="font-body font-bold text-white text-sm leading-snug line-clamp-2">
+          {post.titulo}
         </h3>
-        <p className="font-body text-white/50 text-xs leading-relaxed flex-1">
+        <p className="font-body text-white/50 text-xs leading-relaxed flex-1 line-clamp-3">
           {post.excerpt}
         </p>
 
@@ -126,10 +90,10 @@ function BlogCard({ post, delay }) {
           <div className="w-6 h-6 rounded-full bg-dark-300 flex items-center justify-center shrink-0">
             <User size={12} className="text-white/50" />
           </div>
-          <span className="font-body text-white/50 text-xs">{post.author}</span>
+          <span className="font-body text-white/50 text-xs">{post.autor}</span>
         </div>
       </div>
-    </article>
+    </Link>
   )
 }
 
@@ -139,51 +103,66 @@ function BlogCard({ post, delay }) {
 
 export default function Blog() {
   const [query, setQuery] = useState('')
+  const [posts, setPosts] = useState([])
+  const [loading, setLoading] = useState(true)
   const pageRef = useRef(null)
   useReveal(pageRef)
 
-  const filtered = BLOG_POSTS.filter((p) => {
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const { data, error } = await supabaseAnonRead
+          .from('blog_posts')
+          .select('*')
+          .eq('ativo', true)
+          .order('created_at', { ascending: false })
+
+        if (error) throw error
+        setPosts(data || [])
+      } catch (err) {
+        console.error('Erro ao carregar posts:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPosts()
+  }, [])
+
+  const filtered = posts.filter((p) => {
     const q = query.toLowerCase()
-    return p.title.toLowerCase().includes(q) || p.excerpt.toLowerCase().includes(q)
+    return p.titulo.toLowerCase().includes(q) || p.excerpt.toLowerCase().includes(q)
   })
 
   return (
     <main ref={pageRef} className="min-h-screen bg-dark">
 
       {/* ─────────────────────────────────────────────────────
-          1 · HERO
+          1 · HERO (Baseado em Trabalhos)
       ───────────────────────────────────────────────────── */}
-      <section className="relative w-full h-[40vh] md:h-[45vh] overflow-hidden">
+      <section className="relative h-[45vh] md:h-[55vh] flex items-end overflow-hidden">
         <img
-          src={FotoIsabel}
-          alt="Meu Blog"
-          className="absolute inset-0 w-full h-full object-cover object-top"
+          src={trabalhoContainer}
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover opacity-50"
           loading="eager"
+          fetchpriority="high"
           decoding="async"
         />
-        {/* Dark gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/60 to-dark/20" />
-
-        {/* Title */}
-        <div className="absolute bottom-8 left-0 right-0 px-5 md:px-8">
-          <div className="max-w-6xl mx-auto">
-            <h1
-              className="font-display italic text-white leading-none"
-              style={{ fontSize: 'clamp(2.5rem, 8vw, 5rem)' }}
-            >
-              Meu Blog
-            </h1>
-          </div>
+        <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/50 to-transparent" />
+        
+        <div className="relative z-10 max-w-7xl mx-auto px-6 pb-12 w-full">
+          <h1 className="font-display text-4xl md:text-5xl italic text-white">Meu Blog</h1>
         </div>
       </section>
 
       {/* ─────────────────────────────────────────────────────
-          2 · SUBTITLE + SEARCH
+          2 · SEARCH BAR (sem faixa cinza)
       ───────────────────────────────────────────────────── */}
-      <section className="bg-dark-100 border-b border-dark-300 py-6 md:py-8">
-        <div className="max-w-6xl mx-auto px-5 md:px-8">
-          <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
-            <p className="font-body text-white/70 text-sm leading-relaxed flex-1">
+      <section className="py-8 bg-dark">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8 md:justify-between">
+            <p className="font-body text-white/70 text-sm leading-relaxed">
               Dicas e inspirações para planejar o seu ensaio dos sonhos
             </p>
             {/* Search */}
@@ -196,7 +175,7 @@ export default function Blog() {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar"
+                placeholder="Buscar posts"
                 className="w-full bg-dark-200 border border-white/15 text-white text-sm
                            font-body rounded-full pl-9 pr-4 py-2.5
                            placeholder:text-white/40 focus:outline-none focus:border-gold/50
@@ -210,9 +189,13 @@ export default function Blog() {
       {/* ─────────────────────────────────────────────────────
           3 · BLOG CARDS GRID
       ───────────────────────────────────────────────────── */}
-      <section className="py-14 md:py-20 bg-dark">
-        <div className="max-w-6xl mx-auto px-5 md:px-8">
-          {filtered.length > 0 ? (
+      <section className="py-12 bg-dark">
+        <div className="max-w-7xl mx-auto px-6">
+          {loading ? (
+            <div className="text-center py-20">
+              <p className="font-body text-white/40 text-sm">Carregando posts...</p>
+            </div>
+          ) : filtered.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {filtered.map((post, i) => (
                 <BlogCard key={post.id} post={post} delay={i * 80} />
@@ -224,7 +207,9 @@ export default function Blog() {
               style={revealStyle(0)}
               className="text-center py-20"
             >
-              <p className="font-body text-white/40 text-sm">Nenhum post encontrado.</p>
+              <p className="font-body text-white/40 text-sm">
+                {query ? 'Nenhum post encontrado.' : 'Nenhum post publicado ainda.'}
+              </p>
             </div>
           )}
         </div>
@@ -234,7 +219,7 @@ export default function Blog() {
           4 · CTA FINAL
       ───────────────────────────────────────────────────── */}
       <section className="py-14 md:py-24 bg-dark-100 overflow-hidden">
-        <div className="max-w-6xl mx-auto px-5 md:px-8">
+        <div className="max-w-7xl mx-auto px-6">
           <div className="relative rounded-3xl overflow-hidden bg-dark-200 border border-dark-300 p-8 md:p-14">
 
             <div className="absolute inset-0 opacity-15">

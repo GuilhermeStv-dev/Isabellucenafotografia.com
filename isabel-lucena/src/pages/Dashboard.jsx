@@ -69,6 +69,11 @@ const Icon = {
       <path d="M21 15l-5-5L5 21"/>
     </svg>
   ),
+  FileText: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+    </svg>
+  ),
 };
 
 function LoginScreen({ onLogin }) {
@@ -720,6 +725,412 @@ function AbaCategorias({ categorias, onAtualizar }) {
   );
 }
 
+/* ═══════════════════════════════════════════════════
+   ABA BLOG
+═══════════════════════════════════════════════════ */
+
+function AbaBlog() {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editando, setEditando] = useState(null);
+  const [mostrarForm, setMostrarForm] = useState(false);
+
+  const [formData, setFormData] = useState({
+    titulo: '',
+    slug: '',
+    excerpt: '',
+    conteudo: '',
+    imagem_capa: '',
+    autor: 'Isabel Lucena Fotografia',
+    ativo: true
+  });
+
+  const gerarSlug = (titulo) => {
+    return titulo
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  };
+
+  const carregarPosts = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setPosts(data || []);
+    } catch (err) {
+      alert('Erro ao carregar posts: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { carregarPosts(); }, []);
+
+  const resetForm = () => {
+    setFormData({
+      titulo: '',
+      slug: '',
+      excerpt: '',
+      conteudo: '',
+      imagem_capa: '',
+      autor: 'Isabel Lucena Fotografia',
+      ativo: true
+    });
+    setEditando(null);
+    setMostrarForm(false);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.titulo || !formData.excerpt || !formData.conteudo || !formData.imagem_capa) {
+      alert('Preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    const slugFinal = formData.slug || gerarSlug(formData.titulo);
+    const dataToSave = { ...formData, slug: slugFinal };
+
+    try {
+      if (editando) {
+        const { error } = await supabase
+          .from('blog_posts')
+          .update(dataToSave)
+          .eq('id', editando);
+
+        if (error) throw error;
+        alert('Post atualizado com sucesso!');
+      } else {
+        const { error } = await supabase
+          .from('blog_posts')
+          .insert(dataToSave);
+
+        if (error) throw error;
+        alert('Post criado com sucesso!');
+      }
+
+      resetForm();
+      carregarPosts();
+    } catch (err) {
+      alert('Erro ao salvar post: ' + err.message);
+    }
+  };
+
+  const handleEdit = (post) => {
+    setFormData({
+      titulo: post.titulo,
+      slug: post.slug,
+      excerpt: post.excerpt,
+      conteudo: post.conteudo,
+      imagem_capa: post.imagem_capa,
+      autor: post.autor,
+      ativo: post.ativo
+    });
+    setEditando(post.id);
+    setMostrarForm(true);
+  };
+
+  const handleToggleAtivo = async (post) => {
+    try {
+      const { error } = await supabase
+        .from('blog_posts')
+        .update({ ativo: !post.ativo })
+        .eq('id', post.id);
+
+      if (error) throw error;
+      carregarPosts();
+    } catch (err) {
+      alert('Erro ao alterar status: ' + err.message);
+    }
+  };
+
+  const handleDelete = async (post) => {
+    if (!confirm(`Tem certeza que deseja excluir "${post.titulo}"?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('blog_posts')
+        .delete()
+        .eq('id', post.id);
+
+      if (error) throw error;
+      alert('Post excluído com sucesso!');
+      carregarPosts();
+    } catch (err) {
+      alert('Erro ao excluir post: ' + err.message);
+    }
+  };
+
+  return (
+    <div className="max-w-6xl">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="font-display text-3xl text-white mb-1">Blog</h2>
+          <p className="font-body text-white/40 text-sm">Gerencie os posts do seu blog</p>
+        </div>
+        <button
+          onClick={() => setMostrarForm(!mostrarForm)}
+          className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gold text-dark font-body font-semibold text-sm
+                     hover:brightness-110 transition-all duration-200 active:scale-95"
+        >
+          <Icon.Plus />
+          {mostrarForm ? 'Cancelar' : 'Novo Post'}
+        </button>
+      </div>
+
+      {/* Formulário de criação/edição */}
+      {mostrarForm && (
+        <form onSubmit={handleSubmit} className="bg-dark-200 border border-dark-300 rounded-2xl p-6 mb-8">
+          <h3 className="font-display text-xl text-white mb-6">
+            {editando ? 'Editar Post' : 'Novo Post'}
+          </h3>
+
+          <div className="space-y-5">
+            {/* Título */}
+            <div>
+              <label className="block font-body text-sm text-white/70 mb-2">
+                Título *
+              </label>
+              <input
+                type="text"
+                value={formData.titulo}
+                onChange={(e) => {
+                  setFormData({ ...formData, titulo: e.target.value });
+                  if (!editando && !formData.slug) {
+                    setFormData(prev => ({ ...prev, titulo: e.target.value, slug: gerarSlug(e.target.value) }));
+                  }
+                }}
+                placeholder="Ex: Como se preparar para o seu ensaio gestante"
+                className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
+                           font-body text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50"
+                required
+              />
+            </div>
+
+            {/* Slug */}
+            <div>
+              <label className="block font-body text-sm text-white/70 mb-2">
+                Slug (URL) *
+              </label>
+              <input
+                type="text"
+                value={formData.slug}
+                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                placeholder="como-se-preparar-para-seu-ensaio-gestante"
+                className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
+                           font-body text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50"
+              />
+              <p className="mt-1 font-body text-xs text-white/40">
+                URL: /blog/{formData.slug || 'slug-do-post'}
+              </p>
+            </div>
+
+            {/* Resumo */}
+            <div>
+              <label className="block font-body text-sm text-white/70 mb-2">
+                Resumo (Excerpt) *
+              </label>
+              <textarea
+                value={formData.excerpt}
+                onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+                placeholder="Breve descrição que aparece no card do post (150-200 caracteres)"
+                rows={3}
+                maxLength={250}
+                className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
+                           font-body text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50 resize-none"
+                required
+              />
+              <p className="mt-1 font-body text-xs text-white/40 text-right">
+                {formData.excerpt.length}/250
+              </p>
+            </div>
+
+            {/* Imagem de capa */}
+            <div>
+              <label className="block font-body text-sm text-white/70 mb-2">
+                URL da Imagem de Capa *
+              </label>
+              <input
+                type="url"
+                value={formData.imagem_capa}
+                onChange={(e) => setFormData({ ...formData, imagem_capa: e.target.value })}
+                placeholder="https://..."
+                className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
+                           font-body text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50"
+                required
+              />
+              {formData.imagem_capa && (
+                <div className="mt-3 rounded-xl overflow-hidden border border-white/10">
+                  <img src={formData.imagem_capa} alt="Preview" className="w-full h-48 object-cover" />
+                </div>
+              )}
+            </div>
+
+            {/* Conteúdo HTML */}
+            <div>
+              <label className="block font-body text-sm text-white/70 mb-2">
+                Conteúdo (HTML) *
+              </label>
+              <textarea
+                value={formData.conteudo}
+                onChange={(e) => setFormData({ ...formData, conteudo: e.target.value })}
+                placeholder="<h2>Título da seção</h2><p>Seu conteúdo aqui...</p>"
+                rows={12}
+                className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
+                           text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50 resize-none font-mono"
+                required
+              />
+              <p className="mt-1 font-body text-xs text-white/40">
+                Use HTML básico: &lt;h2&gt;, &lt;h3&gt;, &lt;p&gt;, &lt;strong&gt;, &lt;ul&gt;, &lt;li&gt;, etc.
+              </p>
+            </div>
+
+            {/* Autor */}
+            <div>
+              <label className="block font-body text-sm text-white/70 mb-2">
+                Autor
+              </label>
+              <input
+                type="text"
+                value={formData.autor}
+                onChange={(e) => setFormData({ ...formData, autor: e.target.value })}
+                className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
+                           font-body text-sm focus:outline-none focus:border-gold/50"
+              />
+            </div>
+
+            {/* Ativo */}
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="post-ativo"
+                checked={formData.ativo}
+                onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
+                className="w-4 h-4 accent-gold"
+              />
+              <label htmlFor="post-ativo" className="font-body text-sm text-white/70 cursor-pointer">
+                Post ativo (visível no blog)
+              </label>
+            </div>
+          </div>
+
+          {/* Botões */}
+          <div className="flex gap-3 mt-8 pt-6 border-t border-dark-300">
+            <button
+              type="submit"
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gold text-dark font-body font-semibold text-sm
+                         hover:brightness-110 transition-all duration-200"
+            >
+              <Icon.Check />
+              {editando ? 'Salvar Alterações' : 'Publicar Post'}
+            </button>
+            <button
+              type="button"
+              onClick={resetForm}
+              className="px-6 py-3 rounded-xl border border-white/20 text-white/70 font-body text-sm
+                         hover:border-white/40 hover:text-white transition-all duration-200"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Lista de posts */}
+      {loading ? (
+        <div className="text-center py-12">
+          <p className="font-body text-white/40 text-sm">Carregando posts...</p>
+        </div>
+      ) : posts.length === 0 ? (
+        <div className="bg-dark-200 border border-dark-300 rounded-2xl p-12 text-center">
+          <Icon.Image />
+          <p className="font-body text-white/40 text-sm mt-4">Nenhum post criado ainda.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {posts.map((post) => (
+            <div
+              key={post.id}
+              className="bg-dark-200 border border-dark-300 rounded-2xl p-5 flex gap-4"
+            >
+              {/* Thumbnail */}
+              <div className="w-32 h-24 rounded-xl overflow-hidden bg-dark-300 shrink-0">
+                <img
+                  src={post.imagem_capa}
+                  alt={post.titulo}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-display text-lg text-white truncate">
+                      {post.titulo}
+                    </h4>
+                    <p className="font-body text-xs text-white/40 mt-1">
+                      /blog/{post.slug}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-body ${
+                      post.ativo ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
+                    }`}>
+                      {post.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </div>
+                </div>
+                <p className="font-body text-sm text-white/50 line-clamp-2 mb-3">
+                  {post.excerpt}
+                </p>
+                <div className="flex items-center gap-2 text-xs text-white/30">
+                  <span>{new Date(post.created_at).toLocaleDateString('pt-BR')}</span>
+                  {post.updated_at !== post.created_at && (
+                    <span>• Editado {new Date(post.updated_at).toLocaleDateString('pt-BR')}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col gap-2 shrink-0">
+                <button
+                  onClick={() => handleEdit(post)}
+                  className="p-2.5 rounded-lg bg-dark-300 hover:bg-blue-500/20 text-blue-400 transition-colors"
+                  title="Editar"
+                >
+                  <Icon.Edit />
+                </button>
+                <button
+                  onClick={() => handleToggleAtivo(post)}
+                  className="p-2.5 rounded-lg bg-dark-300 hover:bg-gold/20 text-gold transition-colors"
+                  title={post.ativo ? 'Desativar' : 'Ativar'}
+                >
+                  <Icon.Eye off={!post.ativo} />
+                </button>
+                <button
+                  onClick={() => handleDelete(post)}
+                  className="p-2.5 rounded-lg bg-dark-300 hover:bg-red-500/20 text-red-400 transition-colors"
+                  title="Excluir"
+                >
+                  <Icon.Trash />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [sessao, setSessao] = useState(null);
   const [carregando, setCarregando] = useState(true);
@@ -756,6 +1167,7 @@ export default function Dashboard() {
     { id: 'upload', label: 'Adicionar fotos', icon: <Icon.Upload /> },
     { id: 'fotos', label: 'Minhas fotos', icon: <Icon.Grid /> },
     { id: 'categorias', label: 'Categorias', icon: <Icon.Tag /> },
+    { id: 'blog', label: 'Blog', icon: <Icon.FileText /> },
   ];
 
   return (
@@ -818,6 +1230,7 @@ export default function Dashboard() {
         {abaAtiva === 'upload' && <AbaUpload categorias={categorias} onUploadConcluido={carregarCategorias} />}
         {abaAtiva === 'fotos' && <AbaFotos categorias={categorias} />}
         {abaAtiva === 'categorias' && <AbaCategorias categorias={categorias} onAtualizar={carregarCategorias} />}
+        {abaAtiva === 'blog' && <AbaBlog />}
       </main>
     </div>
   );

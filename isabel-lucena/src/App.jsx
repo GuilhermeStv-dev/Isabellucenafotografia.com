@@ -12,6 +12,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Trabalhos = lazy(() => import('./pages/Trabalhos'));
 const GalleryPage = lazy(() => import('./pages/GalleryPage'));
 const Blog = lazy(() => import('./pages/Blog'));
+const BlogPost = lazy(() => import('./pages/BlogPost'));
 
 const PlaceholderPage = ({ title }) => (
   <main className="min-h-screen flex items-center justify-center pt-24">
@@ -82,6 +83,7 @@ function SiteLayout() {
           <Route path="/trabalhos" element={<Trabalhos />} />
           <Route path="/galeria/:categoryId" element={<GalleryPage />} />
           <Route path="/blog"      element={<Blog />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/sobre"     element={<PlaceholderPage title="Sobre Mim" />} />
           <Route path="/servicos"  element={<PlaceholderPage title="Serviços" />} />
         </Routes>
