@@ -37,8 +37,22 @@ export default function BlogPost() {
   }
 
   const handleInstagramShare = async () => {
-    await copyLink('Link copiado! Cole no Instagram.')
-    window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer')
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: post?.titulo || 'Blog',
+          text: post?.excerpt || '',
+          url: currentUrl,
+        })
+        setShareFeedback('Compartilhamento aberto!')
+        setTimeout(() => setShareFeedback(''), 2500)
+        return
+      } catch {
+        // usuário cancelou ou dispositivo não concluiu
+      }
+    }
+
+    await copyLink('Link copiado! Cole no Instagram (story, bio ou direct).')
   }
 
   useEffect(() => {
@@ -149,44 +163,6 @@ export default function BlogPost() {
             {post.excerpt}
           </p>
 
-          {/* Compartilhar */}
-          <div className="mb-8 pb-8 border-b border-dark-300">
-            <p className="font-body text-xs text-white/50 tracking-widest uppercase mb-3">Compartilhar</p>
-            <div className="flex flex-wrap gap-3">
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-gold min-h-[42px]"
-              >
-                <MessageCircle size={14} />
-                WhatsApp
-              </a>
-              <button
-                type="button"
-                onClick={handleInstagramShare}
-                className="btn-outline min-h-[42px]"
-              >
-                <Instagram size={14} />
-                Instagram
-              </button>
-              <button
-                type="button"
-                onClick={() => copyLink('Link copiado com sucesso!')}
-                className="btn-outline min-h-[42px]"
-              >
-                <Copy size={14} />
-                Copiar link
-              </button>
-            </div>
-            {shareFeedback && (
-              <p className="font-body text-xs text-gold mt-3 inline-flex items-center gap-1.5">
-                <Check size={12} />
-                {shareFeedback}
-              </p>
-            )}
-          </div>
-
           {/* Conteúdo HTML */}
           <div 
             className="prose prose-invert prose-gold max-w-none
@@ -225,6 +201,44 @@ export default function BlogPost() {
               </div>
             </div>
           )}
+
+          {/* Compartilhar (fim do post) */}
+          <div className="mt-12 pt-8 border-t border-dark-300">
+            <p className="font-body text-xs text-white/50 tracking-widest uppercase mb-3">Compartilhar este post</p>
+            <div className="flex flex-wrap gap-3">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-gold min-h-[42px]"
+              >
+                <MessageCircle size={14} />
+                WhatsApp
+              </a>
+              <button
+                type="button"
+                onClick={handleInstagramShare}
+                className="btn-outline min-h-[42px]"
+              >
+                <Instagram size={14} />
+                Instagram
+              </button>
+              <button
+                type="button"
+                onClick={() => copyLink('Link copiado com sucesso!')}
+                className="btn-outline min-h-[42px]"
+              >
+                <Copy size={14} />
+                Copiar link
+              </button>
+            </div>
+            {shareFeedback && (
+              <p className="font-body text-xs text-gold mt-3 inline-flex items-center gap-1.5">
+                <Check size={12} />
+                {shareFeedback}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* CTA de contato */}

@@ -51,6 +51,10 @@ const formatDate = (dateString) => {
 ═══════════════════════════════════════════════════ */
 
 function BlogCard({ post, delay }) {
+  const authorName = post.blog_authors?.nome || 'Isabel Lucena Fotografia'
+  const authorRole = post.blog_authors?.profissao || ''
+  const authorPhoto = post.blog_authors?.foto_url || ''
+
   return (
     <Link
       to={`/blog/${post.slug}`}
@@ -87,10 +91,23 @@ function BlogCard({ post, delay }) {
 
         {/* Author row */}
         <div className="flex items-center gap-2 mt-2 pt-3 border-t border-dark-300">
-          <div className="w-6 h-6 rounded-full bg-dark-300 flex items-center justify-center shrink-0">
-            <User size={12} className="text-white/50" />
+          {authorPhoto ? (
+            <img
+              src={authorPhoto}
+              alt={authorName}
+              className="w-8 h-8 rounded-full object-cover border border-gold/20 shrink-0"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-dark-300 flex items-center justify-center shrink-0">
+              <User size={12} className="text-white/50" />
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="font-body text-white/70 text-xs truncate">{authorName}</p>
+            {authorRole && (
+              <p className="font-body text-white/45 text-[11px] truncate">{authorRole}</p>
+            )}
           </div>
-          <span className="font-body text-white/50 text-xs">{post.autor}</span>
         </div>
       </div>
     </Link>
@@ -113,7 +130,7 @@ export default function Blog() {
       try {
         const { data, error } = await supabaseAnonRead
           .from('blog_posts')
-          .select('*')
+          .select('*, blog_authors(nome, profissao, foto_url)')
           .eq('ativo', true)
           .order('created_at', { ascending: false })
 
