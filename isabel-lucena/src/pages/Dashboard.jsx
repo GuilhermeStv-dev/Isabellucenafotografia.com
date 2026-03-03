@@ -539,13 +539,15 @@ function AbaFotos({ categorias }) {
             className={`px-4 py-2 rounded-full font-body text-sm border transition-all duration-200 active:scale-95
               ${catSelecionada === '__all__'
                 ? 'bg-gold text-dark border-gold font-semibold'
-                : 'border-dark-300 text-whit ? 'btn-gold' : 'btn-outline'}`}>
+                : 'btn-outline'}`}>
             Todas
           </button>
           {categorias.map((cat) => (
             <button key={cat.slug} onClick={() => setCatSelecionada(cat.slug)}
               className={`px-4 py-2 rounded-full font-body text-sm border transition-all duration-200 active:scale-95
-                ${catSelecionada === cat.slug ? 'btn-gold' : 'btn-outlin
+                ${catSelecionada === cat.slug ? 'btn-gold' : 'btn-outline'}`}>
+              {cat.nome}
+            </button>
           ))}
         </div>
       </div>
