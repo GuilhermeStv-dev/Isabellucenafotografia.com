@@ -11,7 +11,7 @@ import trabalhoContainer from '../assets/trabalho-container.webp'
    HOOKS
 ═══════════════════════════════════════════════════ */
 
-function useReveal(ref) {
+function useReveal(ref, deps = []) {
   useEffect(() => {
     const elements = ref?.current
       ? ref.current.querySelectorAll('[data-reveal]')
@@ -31,7 +31,7 @@ function useReveal(ref) {
     )
     elements.forEach((el) => observer.observe(el))
     return () => observer.disconnect()
-  }, [ref])
+  }, [ref, ...deps])
 }
 
 const revealStyle = (delay = 0) => ({
@@ -106,7 +106,7 @@ export default function Blog() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const pageRef = useRef(null)
-  useReveal(pageRef)
+  useReveal(pageRef, [posts.length, loading, query])
 
   useEffect(() => {
     const fetchPosts = async () => {

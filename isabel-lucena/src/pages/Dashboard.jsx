@@ -971,16 +971,14 @@ function AbaAutoresModal({ isOpen, onClose, onAuthorAdded, editingAuthor = null 
             <button
               type="submit"
               disabled={loading || uploadingFoto}
-              className="px-6 py-3 rounded-xl bg-gold text-dark font-body font-semibold text-sm
-                         hover:brightness-110 transition-all disabled:opacity-50"
+              className="btn-gold min-h-[44px] justify-center"
             >
               {loading ? 'Salvando...' : 'Salvar Autor'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-3 rounded-xl border border-white/20 text-white/70 font-body text-sm
-                         hover:border-white/40 transition-all"
+              className="btn-outline min-h-[44px] justify-center"
             >
               Cancelar
             </button>
@@ -1255,11 +1253,12 @@ function AbaBlog() {
             </div>
             <button
               onClick={() => setMostrarForm(!mostrarForm)}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gold text-dark font-body font-semibold text-sm
-                         hover:brightness-110 transition-all active:scale-95"
+              className={`${mostrarForm ? 'btn-outline' : 'btn-gold'} min-h-[44px] btn-arrow-hover`}
             >
-              <Icon.Plus />
-              {mostrarForm ? 'Cancelar' : 'Novo Post'}
+              <span className="flex items-center gap-2">
+                <Icon.Plus />
+                <span>{mostrarForm ? 'Cancelar' : 'Novo Post'}</span>
+              </span>
             </button>
           </div>
 
@@ -1387,27 +1386,28 @@ function AbaBlog() {
                   type="button"
                   onClick={() => salvarPost(true)}
                   disabled={uploadingCapa}
-                  className="flex-1 px-6 py-3 rounded-xl bg-gold text-dark font-body font-semibold text-sm
-                             hover:brightness-110 transition-all disabled:opacity-50 active:scale-95"
+                  className="btn-gold flex-1 min-h-[44px] justify-center"
                 >
-                  <Icon.Check size={18} className="inline mr-2" />
-                  Publicar Post
+                  <span className="flex items-center gap-2">
+                    <Icon.Check />
+                    <span>Publicar Post</span>
+                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => salvarPost(false)}
                   disabled={uploadingCapa}
-                  className="flex-1 px-6 py-3 rounded-xl border-2 border-white/20 text-white/70 font-body font-semibold text-sm
-                             hover:border-gold/50 hover:text-gold transition-all disabled:opacity-50 active:scale-95"
+                  className="btn-outline flex-1 min-h-[44px] justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Icon.FileText size={18} className="inline mr-2" />
-                  Salvar como Rascunho
+                  <span className="flex items-center gap-2">
+                    <Icon.FileText />
+                    <span>Salvar como Rascunho</span>
+                  </span>
                 </button>
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="flex-1 px-6 py-3 rounded-xl border-2 border-white/20 text-white/70 font-body font-semibold text-sm
-                             hover:border-white/40 hover:text-white transition-all active:scale-95"
+                  className="btn-outline flex-1 min-h-[44px] justify-center"
                 >
                   Cancelar
                 </button>
@@ -1487,11 +1487,12 @@ function AbaBlog() {
                 setEditingAuthor(null);
                 setMostrarAuthorModal(true);
               }}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gold text-dark font-body font-semibold text-sm
-                         hover:brightness-110 transition-all active:scale-95"
+              className="btn-gold min-h-[44px] btn-arrow-hover"
             >
-              <Icon.Plus />
-              Novo Autor
+              <span className="flex items-center gap-2">
+                <Icon.Plus />
+                <span>Novo Autor</span>
+              </span>
             </button>
           </div>
 
