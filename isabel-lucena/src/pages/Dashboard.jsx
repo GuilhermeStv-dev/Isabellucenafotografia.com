@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase, supabaseAnonRead, uploadFoto, deleteFotoStorage } from '../lib/supabase';
 import { compressImage, runWithConcurrency } from '../lib/imageUtils';
 import { generatePlaceholder } from '../lib/generatePlaceholder';
+import RichEditor from '../components/RichEditor';
 import LogoBranca from '../assets/Logo-horzontal-branca.webp';
 
 const Icon = {
@@ -729,19 +730,248 @@ function AbaCategorias({ categorias, onAtualizar }) {
    ABA BLOG
 ═══════════════════════════════════════════════════ */
 
+/* ═══════════════════════════════════════════════════
+   ABA BLOG - AUTORES
+═══════════════════════════════════════════════════ */
+
+function AbaAutoresModal({ isOpen, onClose, onAuthorAdded, editingAuthor = null }) {
+  const [foto, setFoto] = useState(editingAuthor?.foto_url || '');
+  const [fotoPreviewing, setFotoPreviewing] = useState(editingAuthor?.foto_url || '');
+  const [uploadingFoto, setUploadingFoto] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const [formData, setFormData] = useState({
+    nome: editingAuthor?.nome || '',
+    profissao: editingAuthor?.profissao || '',
+    bio: editingAuthor?.bio || '',
+    ativo: editingAuthor?.ativo ?? true
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  const uploadFotoAutor = async (file) => {
+    if (!file) return null;
+    try {
+      setUploadingFoto(true);
+      const ext = file.name.split('.').pop();
+      const fileName = `autor-${Date.now()}.${ext}`;
+      const { data, error } = await supabase.storage
+        .from('blog-images')
+        .upload(`authors/${fileName}`, file);
+
+      if (error) throw error;
+      
+      const { data: publicUrl } = await supabase.storage
+        .from('blog-images')
+        .getPublicUrl(`authors/${fileName}`);
+
+      return publicUrl.publicUrl;
+    } catch (err) {
+      alert('Erro ao fazer upload: ' + err.message);
+      return null;
+    } finally {
+      setUploadingFoto(false);
+    }
+  };
+
+  const handleFotoChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const preview = URL.createObjectURL(file);
+    setFotoPreviewing(preview);
+
+    const url = await uploadFotoAutor(file);
+    if (url) {
+      setFoto(url);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.nome.trim()) {
+      alert('Nome é obrigatório');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const dataToSave = {
+        ...formData,
+        foto_url: foto || null
+      };
+
+      if (editingAuthor) {
+        const { error } = await supabase
+          .from('blog_authors')
+          .update(dataToSave)
+          .eq('id', editingAuthor.id);
+        if (error) throw error;
+        alert('Autor atualizado!');
+      } else {
+        const { error } = await supabase
+          .from('blog_authors')
+          .insert(dataToSave);
+        if (error) throw error;
+        alert('Autor criado!');
+      }
+
+      onAuthorAdded?.();
+      onClose();
+    } catch (err) {
+      alert('Erro: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
+      <div className="bg-dark-200 border border-dark-300 rounded-2xl p-6 max-w-2xl w-full my-8">
+        <h3 className="font-display text-2xl text-white mb-6">
+          {editingAuthor ? 'Editar Autor' : 'Novo Autor'}
+        </h3>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Foto */}
+          <div>
+            <label className="block font-body text-sm text-white/70 mb-3">Foto de Perfil</label>
+            <div className="flex gap-4 items-start">
+              <div className="w-24 h-24 rounded-full overflow-hidden bg-dark-300 border border-white/10 shrink-0">
+                {fotoPreviewing ? (
+                  <img src={fotoPreviewing} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/30">👤</div>
+                )}
+              </div>
+              <div className="flex-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFotoChange}
+                  disabled={uploadingFoto}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingFoto}
+                  className="block px-4 py-2 rounded-lg bg-dark-300 text-white text-sm font-body
+                             hover:bg-dark-100 transition-colors disabled:opacity-50"
+                >
+                  {uploadingFoto ? 'Enviando...' : 'Escolher Foto'}
+                </button>
+                <p className="text-xs text-white/40 mt-2">JPEG, PNG (máx 5MB)</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Nome */}
+          <div>
+            <label className="block font-body text-sm text-white/70 mb-2">Nome *</label>
+            <input
+              type="text"
+              value={formData.nome}
+              onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+              placeholder="Ex: Isabel Lucena"
+              className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
+                         font-body text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50"
+              required
+            />
+          </div>
+
+          {/* Profissão */}
+          <div>
+            <label className="block font-body text-sm text-white/70 mb-2">Profissão</label>
+            <input
+              type="text"
+              value={formData.profissao}
+              onChange={(e) => setFormData({ ...formData, profissao: e.target.value })}
+              placeholder="Ex: Fotógrafa"
+              className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
+                         font-body text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50"
+            />
+          </div>
+
+          {/* Bio */}
+          <div>
+            <label className="block font-body text-sm text-white/70 mb-2">Bio</label>
+            <textarea
+              value={formData.bio}
+              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+              placeholder="Breve descrição sobre o autor"
+              rows={3}
+              className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
+                         font-body text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50 resize-none"
+            />
+          </div>
+
+          {/* Ativo */}
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="author-ativo"
+              checked={formData.ativo}
+              onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
+              className="w-4 h-4 accent-gold"
+            />
+            <label htmlFor="author-ativo" className="font-body text-sm text-white/70 cursor-pointer">
+              Autor ativo
+            </label>
+          </div>
+
+          {/* Botões */}
+          <div className="flex gap-3 pt-6 border-t border-dark-300">
+            <button
+              type="submit"
+              disabled={loading || uploadingFoto}
+              className="px-6 py-3 rounded-xl bg-gold text-dark font-body font-semibold text-sm
+                         hover:brightness-110 transition-all disabled:opacity-50"
+            >
+              {loading ? 'Salvando...' : 'Salvar Autor'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-6 py-3 rounded-xl border border-white/20 text-white/70 font-body text-sm
+                         hover:border-white/40 transition-all"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   ABA BLOG
+═══════════════════════════════════════════════════ */
+
 function AbaBlog() {
+  const [tab, setTab] = useState('posts'); // 'posts' ou 'autores'
   const [posts, setPosts] = useState([]);
+  const [autores, setAutores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editando, setEditando] = useState(null);
   const [mostrarForm, setMostrarForm] = useState(false);
+  const [mostrarAuthorModal, setMostrarAuthorModal] = useState(false);
+  const [editingAuthor, setEditingAuthor] = useState(null);
+
+  const [imagemCapaUrl, setImagemCapaUrl] = useState('');
+  const [imagemCapaPreview, setImagemCapaPreview] = useState('');
+  const [uploadingCapa, setUploadingCapa] = useState(false);
+  const fileInputCapaRef = useRef(null);
 
   const [formData, setFormData] = useState({
     titulo: '',
-    slug: '',
     excerpt: '',
     conteudo: '',
-    imagem_capa: '',
-    autor: 'Isabel Lucena Fotografia',
+    autor_id: '',
     ativo: true
   });
 
@@ -755,34 +985,86 @@ function AbaBlog() {
   };
 
   const carregarPosts = async () => {
-    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('blog_posts')
-        .select('*')
+        .select('*, blog_authors(nome, profissao)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setPosts(data || []);
     } catch (err) {
       alert('Erro ao carregar posts: ' + err.message);
-    } finally {
-      setLoading(false);
     }
   };
 
-  useEffect(() => { carregarPosts(); }, []);
+  const carregarAutores = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('blog_authors')
+        .select('*')
+        .order('nome');
+
+      if (error) throw error;
+      setAutores(data || []);
+    } catch (err) {
+      alert('Erro ao carregar autores: ' + err.message);
+    }
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([carregarPosts(), carregarAutores()]).finally(() => setLoading(false));
+  }, []);
+
+  const uploadCapaBlog = async (file) => {
+    if (!file) return null;
+    try {
+      setUploadingCapa(true);
+      const ext = file.name.split('.').pop();
+      const fileName = `post-${Date.now()}.${ext}`;
+      const { data, error } = await supabase.storage
+        .from('blog-images')
+        .upload(`posts/${fileName}`, file);
+
+      if (error) throw error;
+      
+      const { data: publicUrl } = await supabase.storage
+        .from('blog-images')
+        .getPublicUrl(`posts/${fileName}`);
+
+      return publicUrl.publicUrl;
+    } catch (err) {
+      alert('Erro ao fazer upload: ' + err.message);
+      return null;
+    } finally {
+      setUploadingCapa(false);
+    }
+  };
+
+  const handleCapaChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const preview = URL.createObjectURL(file);
+    setImagemCapaPreview(preview);
+
+    const url = await uploadCapaBlog(file);
+    if (url) {
+      setImagemCapaUrl(url);
+    }
+  };
 
   const resetForm = () => {
     setFormData({
       titulo: '',
-      slug: '',
       excerpt: '',
       conteudo: '',
-      imagem_capa: '',
-      autor: 'Isabel Lucena Fotografia',
+      autor_id: '',
       ativo: true
     });
+    setImagemCapaUrl('');
+    setImagemCapaPreview('');
     setEditando(null);
     setMostrarForm(false);
   };
@@ -790,13 +1072,21 @@ function AbaBlog() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!formData.titulo || !formData.excerpt || !formData.conteudo || !formData.imagem_capa) {
-      alert('Preencha todos os campos obrigatórios.');
+    if (!formData.titulo || !formData.excerpt || !formData.conteudo || !imagemCapaUrl) {
+      alert('Preencha todos os campos obrigatórios (incluindo imagem de capa).');
       return;
     }
 
-    const slugFinal = formData.slug || gerarSlug(formData.titulo);
-    const dataToSave = { ...formData, slug: slugFinal };
+    const slug = gerarSlug(formData.titulo);
+    const dataToSave = {
+      titulo: formData.titulo,
+      slug,
+      excerpt: formData.excerpt,
+      conteudo: formData.conteudo,
+      imagem_capa: imagemCapaUrl,
+      autor_id: formData.autor_id || null,
+      ativo: formData.ativo
+    };
 
     try {
       if (editando) {
@@ -826,310 +1116,396 @@ function AbaBlog() {
   const handleEdit = (post) => {
     setFormData({
       titulo: post.titulo,
-      slug: post.slug,
       excerpt: post.excerpt,
       conteudo: post.conteudo,
-      imagem_capa: post.imagem_capa,
-      autor: post.autor,
+      autor_id: post.autor_id || '',
       ativo: post.ativo
     });
+    setImagemCapaUrl(post.imagem_capa);
+    setImagemCapaPreview(post.imagem_capa);
     setEditando(post.id);
     setMostrarForm(true);
   };
 
   const handleToggleAtivo = async (post) => {
     try {
-      const { error } = await supabase
+      await supabase
         .from('blog_posts')
         .update({ ativo: !post.ativo })
         .eq('id', post.id);
-
-      if (error) throw error;
       carregarPosts();
     } catch (err) {
-      alert('Erro ao alterar status: ' + err.message);
+      alert('Erro: ' + err.message);
     }
   };
 
-  const handleDelete = async (post) => {
-    if (!confirm(`Tem certeza que deseja excluir "${post.titulo}"?`)) return;
+  const handleDeletePost = async (post) => {
+    if (!confirm(`Excluir "${post.titulo}"?`)) return;
 
     try {
-      const { error } = await supabase
-        .from('blog_posts')
-        .delete()
-        .eq('id', post.id);
-
-      if (error) throw error;
-      alert('Post excluído com sucesso!');
+      await supabase.from('blog_posts').delete().eq('id', post.id);
+      alert('Post excluído!');
       carregarPosts();
     } catch (err) {
-      alert('Erro ao excluir post: ' + err.message);
+      alert('Erro: ' + err.message);
     }
   };
 
+  const handleDeleteAuthor = async (author) => {
+    if (!confirm(`Excluir autor "${author.nome}"?`)) return;
+
+    try {
+      await supabase.from('blog_authors').delete().eq('id', author.id);
+      alert('Autor excluído!');
+      carregarAutores();
+    } catch (err) {
+      alert('Erro: ' + err.message);
+    }
+  };
+
+  if (loading) {
+    return <div className="text-center py-12"><p className="text-white/40">Carregando...</p></div>;
+  }
+
   return (
-    <div className="max-w-6xl">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="font-display text-3xl text-white mb-1">Blog</h2>
-          <p className="font-body text-white/40 text-sm">Gerencie os posts do seu blog</p>
-        </div>
+    <div className="max-w-7xl space-y-6">
+      {/* Tabs */}
+      <div className="flex gap-4 border-b border-dark-300">
         <button
-          onClick={() => setMostrarForm(!mostrarForm)}
-          className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gold text-dark font-body font-semibold text-sm
-                     hover:brightness-110 transition-all duration-200 active:scale-95"
+          onClick={() => setTab('posts')}
+          className={`px-4 py-3 font-body text-sm font-semibold border-b-2 transition-colors ${
+            tab === 'posts'
+              ? 'border-gold text-gold'
+              : 'border-transparent text-white/50 hover:text-white'
+          }`}
         >
-          <Icon.Plus />
-          {mostrarForm ? 'Cancelar' : 'Novo Post'}
+          Posts ({posts.length})
+        </button>
+        <button
+          onClick={() => setTab('autores')}
+          className={`px-4 py-3 font-body text-sm font-semibold border-b-2 transition-colors ${
+            tab === 'autores'
+              ? 'border-gold text-gold'
+              : 'border-transparent text-white/50 hover:text-white'
+          }`}
+        >
+          Autores ({autores.length})
         </button>
       </div>
 
-      {/* Formulário de criação/edição */}
-      {mostrarForm && (
-        <form onSubmit={handleSubmit} className="bg-dark-200 border border-dark-300 rounded-2xl p-6 mb-8">
-          <h3 className="font-display text-xl text-white mb-6">
-            {editando ? 'Editar Post' : 'Novo Post'}
-          </h3>
-
-          <div className="space-y-5">
-            {/* Título */}
+      {/* TAB: POSTSunlock */}
+      {tab === 'posts' && (
+        <>
+          <div className="flex items-center justify-between">
             <div>
-              <label className="block font-body text-sm text-white/70 mb-2">
-                Título *
-              </label>
-              <input
-                type="text"
-                value={formData.titulo}
-                onChange={(e) => {
-                  setFormData({ ...formData, titulo: e.target.value });
-                  if (!editando && !formData.slug) {
-                    setFormData(prev => ({ ...prev, titulo: e.target.value, slug: gerarSlug(e.target.value) }));
-                  }
-                }}
-                placeholder="Ex: Como se preparar para o seu ensaio gestante"
-                className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
-                           font-body text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50"
-                required
-              />
+              <h2 className="font-display text-3xl text-white">Meus Posts</h2>
+              <p className="font-body text-white/40 text-sm mt-1">Crie e gerencie seus artigos de blog</p>
             </div>
-
-            {/* Slug */}
-            <div>
-              <label className="block font-body text-sm text-white/70 mb-2">
-                Slug (URL) *
-              </label>
-              <input
-                type="text"
-                value={formData.slug}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                placeholder="como-se-preparar-para-seu-ensaio-gestante"
-                className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
-                           font-body text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50"
-              />
-              <p className="mt-1 font-body text-xs text-white/40">
-                URL: /blog/{formData.slug || 'slug-do-post'}
-              </p>
-            </div>
-
-            {/* Resumo */}
-            <div>
-              <label className="block font-body text-sm text-white/70 mb-2">
-                Resumo (Excerpt) *
-              </label>
-              <textarea
-                value={formData.excerpt}
-                onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
-                placeholder="Breve descrição que aparece no card do post (150-200 caracteres)"
-                rows={3}
-                maxLength={250}
-                className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
-                           font-body text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50 resize-none"
-                required
-              />
-              <p className="mt-1 font-body text-xs text-white/40 text-right">
-                {formData.excerpt.length}/250
-              </p>
-            </div>
-
-            {/* Imagem de capa */}
-            <div>
-              <label className="block font-body text-sm text-white/70 mb-2">
-                URL da Imagem de Capa *
-              </label>
-              <input
-                type="url"
-                value={formData.imagem_capa}
-                onChange={(e) => setFormData({ ...formData, imagem_capa: e.target.value })}
-                placeholder="https://..."
-                className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
-                           font-body text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50"
-                required
-              />
-              {formData.imagem_capa && (
-                <div className="mt-3 rounded-xl overflow-hidden border border-white/10">
-                  <img src={formData.imagem_capa} alt="Preview" className="w-full h-48 object-cover" />
-                </div>
-              )}
-            </div>
-
-            {/* Conteúdo HTML */}
-            <div>
-              <label className="block font-body text-sm text-white/70 mb-2">
-                Conteúdo (HTML) *
-              </label>
-              <textarea
-                value={formData.conteudo}
-                onChange={(e) => setFormData({ ...formData, conteudo: e.target.value })}
-                placeholder="<h2>Título da seção</h2><p>Seu conteúdo aqui...</p>"
-                rows={12}
-                className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
-                           text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50 resize-none font-mono"
-                required
-              />
-              <p className="mt-1 font-body text-xs text-white/40">
-                Use HTML básico: &lt;h2&gt;, &lt;h3&gt;, &lt;p&gt;, &lt;strong&gt;, &lt;ul&gt;, &lt;li&gt;, etc.
-              </p>
-            </div>
-
-            {/* Autor */}
-            <div>
-              <label className="block font-body text-sm text-white/70 mb-2">
-                Autor
-              </label>
-              <input
-                type="text"
-                value={formData.autor}
-                onChange={(e) => setFormData({ ...formData, autor: e.target.value })}
-                className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
-                           font-body text-sm focus:outline-none focus:border-gold/50"
-              />
-            </div>
-
-            {/* Ativo */}
-            <div className="flex items-center gap-3">
-              <input
-                type="checkbox"
-                id="post-ativo"
-                checked={formData.ativo}
-                onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
-                className="w-4 h-4 accent-gold"
-              />
-              <label htmlFor="post-ativo" className="font-body text-sm text-white/70 cursor-pointer">
-                Post ativo (visível no blog)
-              </label>
-            </div>
-          </div>
-
-          {/* Botões */}
-          <div className="flex gap-3 mt-8 pt-6 border-t border-dark-300">
             <button
-              type="submit"
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gold text-dark font-body font-semibold text-sm
-                         hover:brightness-110 transition-all duration-200"
+              onClick={() => setMostrarForm(!mostrarForm)}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gold text-dark font-body font-semibold text-sm
+                         hover:brightness-110 transition-all active:scale-95"
             >
-              <Icon.Check />
-              {editando ? 'Salvar Alterações' : 'Publicar Post'}
-            </button>
-            <button
-              type="button"
-              onClick={resetForm}
-              className="px-6 py-3 rounded-xl border border-white/20 text-white/70 font-body text-sm
-                         hover:border-white/40 hover:text-white transition-all duration-200"
-            >
-              Cancelar
+              <Icon.Plus />
+              {mostrarForm ? 'Cancelar' : 'Novo Post'}
             </button>
           </div>
-        </form>
-      )}
 
-      {/* Lista de posts */}
-      {loading ? (
-        <div className="text-center py-12">
-          <p className="font-body text-white/40 text-sm">Carregando posts...</p>
-        </div>
-      ) : posts.length === 0 ? (
-        <div className="bg-dark-200 border border-dark-300 rounded-2xl p-12 text-center">
-          <Icon.Image />
-          <p className="font-body text-white/40 text-sm mt-4">Nenhum post criado ainda.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {posts.map((post) => (
-            <div
-              key={post.id}
-              className="bg-dark-200 border border-dark-300 rounded-2xl p-5 flex gap-4"
-            >
-              {/* Thumbnail */}
-              <div className="w-32 h-24 rounded-xl overflow-hidden bg-dark-300 shrink-0">
-                <img
-                  src={post.imagem_capa}
-                  alt={post.titulo}
-                  className="w-full h-full object-cover"
+          {/* Formulário */}
+          {mostrarForm && (
+            <form onSubmit={handleSubmit} className="bg-dark-200 border border-dark-300 rounded-2xl p-8 space-y-6">
+              <h3 className="font-display text-2xl text-white">
+                {editando ? 'Editar Post' : 'Criar Novo Post'}
+              </h3>
+
+              {/* Título */}
+              <div>
+                <label className="block font-body text-sm text-white/70 mb-2">Título do Post *</label>
+                <input
+                  type="text"
+                  value={formData.titulo}
+                  onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
+                  placeholder="Ex: Como se preparar para o seu ensaio gestante"
+                  className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
+                             font-body text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50"
+                  required
                 />
+                <p className="text-xs text-white/40 mt-2">
+                  URL: <strong>/blog/{gerarSlug(formData.titulo) || 'titulo-do-post'}</strong>
+                </p>
               </div>
 
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-3 mb-2">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-display text-lg text-white truncate">
-                      {post.titulo}
-                    </h4>
-                    <p className="font-body text-xs text-white/40 mt-1">
-                      /blog/{post.slug}
-                    </p>
+              {/* Resumo */}
+              <div>
+                <label className="block font-body text-sm text-white/70 mb-2">Resumo (Excerpt) *</label>
+                <textarea
+                  value={formData.excerpt}
+                  onChange={(e) => setFormData({ ...formData, excerpt: e.target.value })}
+                  placeholder="Breve descrição que aparece no card do post"
+                  rows={2}
+                  maxLength={250}
+                  className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
+                             font-body text-sm placeholder:text-white/30 focus:outline-none focus:border-gold/50 resize-none"
+                  required
+                />
+                <p className="text-xs text-white/40 text-right mt-1">{formData.excerpt.length}/250</p>
+              </div>
+
+              {/* Imagem de Capa */}
+              <div>
+                <label className="block font-body text-sm text-white/70 mb-3">Imagem de Capa *</label>
+                <div className="flex gap-4 items-start">
+                  <div className="flex-1">
+                    <input
+                      ref={fileInputCapaRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleCapaChange}
+                      disabled={uploadingCapa}
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputCapaRef.current?.click()}
+                      disabled={uploadingCapa}
+                      className="block w-full px-6 py-4 rounded-xl border-2 border-dashed border-white/20
+                                 text-white/60 font-body text-sm hover:border-gold/50 hover:text-gold transition-colors
+                                 disabled:opacity-50"
+                    >
+                      {uploadingCapa ? '📤 Enviando...' : '📤 Clique para escolher ou arraste uma imagem'}
+                    </button>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-body ${
-                      post.ativo ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                    }`}>
-                      {post.ativo ? 'Ativo' : 'Inativo'}
-                    </span>
-                  </div>
-                </div>
-                <p className="font-body text-sm text-white/50 line-clamp-2 mb-3">
-                  {post.excerpt}
-                </p>
-                <div className="flex items-center gap-2 text-xs text-white/30">
-                  <span>{new Date(post.created_at).toLocaleDateString('pt-BR')}</span>
-                  {post.updated_at !== post.created_at && (
-                    <span>• Editado {new Date(post.updated_at).toLocaleDateString('pt-BR')}</span>
+                  {imagemCapaPreview && (
+                    <div className="w-32 h-32 rounded-xl overflow-hidden border border-white/10 shrink-0">
+                      <img src={imagemCapaPreview} alt="Preview" className="w-full h-full object-cover" />
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex flex-col gap-2 shrink-0">
+              {/* Conteúdo com Editor Visual */}
+              <div>
+                <label className="block font-body text-sm text-white/70 mb-2">Conteúdo do Post *</label>
+                <RichEditor
+                  value={formData.conteudo}
+                  onChange={(html) => setFormData({ ...formData, conteudo: html })}
+                />
+              </div>
+
+              {/* Autor */}
+              <div>
+                <label className="block font-body text-sm text-white/70 mb-2">Autor</label>
+                {autores.length === 0 ? (
+                  <div className="p-4 bg-dark-300 rounded-xl text-center">
+                    <p className="font-body text-sm text-white/50 mb-3">Nenhum autor cadastrado</p>
+                    <button
+                      type="button"
+                      onClick={() => setMostrarAuthorModal(true)}
+                      className="text-gold font-semibold text-sm hover:underline"
+                    >
+                      Criar primeiro autor
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={formData.autor_id}
+                    onChange={(e) => setFormData({ ...formData, autor_id: e.target.value })}
+                    className="w-full bg-dark-300 border border-white/10 text-white rounded-xl px-4 py-3
+                               font-body text-sm focus:outline-none focus:border-gold/50"
+                  >
+                    <option value="">Selecionar autor (opcional)</option>
+                    {autores.map((author) => (
+                      <option key={author.id} value={author.id}>
+                        {author.nome} {author.profissao ? `- ${author.profissao}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Ativo */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="post-ativo"
+                  checked={formData.ativo}
+                  onChange={(e) => setFormData({ ...formData, ativo: e.target.checked })}
+                  className="w-4 h-4 accent-gold"
+                />
+                <label htmlFor="post-ativo" className="font-body text-sm text-white/70 cursor-pointer">
+                  Publicar post (se não marcar, fica como rascunho)
+                </label>
+              </div>
+
+              {/* Botões */}
+              <div className="flex gap-3 pt-6 border-t border-dark-300">
                 <button
-                  onClick={() => handleEdit(post)}
-                  className="p-2.5 rounded-lg bg-dark-300 hover:bg-blue-500/20 text-blue-400 transition-colors"
-                  title="Editar"
+                  type="submit"
+                  disabled={uploadingCapa}
+                  className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gold text-dark font-body font-semibold text-sm
+                             hover:brightness-110 transition-all disabled:opacity-50"
                 >
-                  <Icon.Edit />
+                  <Icon.Check />
+                  {editando ? 'Atualizar Post' : 'Publicar Post'}
                 </button>
                 <button
-                  onClick={() => handleToggleAtivo(post)}
-                  className="p-2.5 rounded-lg bg-dark-300 hover:bg-gold/20 text-gold transition-colors"
-                  title={post.ativo ? 'Desativar' : 'Ativar'}
+                  type="button"
+                  onClick={resetForm}
+                  className="px-6 py-3 rounded-xl border border-white/20 text-white/70 font-body text-sm
+                             hover:border-white/40 hover:text-white transition-all"
                 >
-                  <Icon.Eye off={!post.ativo} />
-                </button>
-                <button
-                  onClick={() => handleDelete(post)}
-                  className="p-2.5 rounded-lg bg-dark-300 hover:bg-red-500/20 text-red-400 transition-colors"
-                  title="Excluir"
-                >
-                  <Icon.Trash />
+                  Cancelar
                 </button>
               </div>
+            </form>
+          )}
+
+          {/* Lista de Posts */}
+          {posts.length === 0 ? (
+            <div className="bg-dark-200 border border-dark-300 rounded-2xl p-12 text-center">
+              <p className="font-body text-white/40 text-sm">Nenhum post criado ainda. Comece a escrever!</p>
             </div>
-          ))}
-        </div>
+          ) : (
+            <div className="space-y-3">
+              {posts.map((post) => (
+                <div
+                  key={post.id}
+                  className="bg-dark-200 border border-dark-300 rounded-xl p-4 flex gap-4 items-start hover:border-white/20 transition-colors"
+                >
+                  <img src={post.imagem_capa} alt="" className="w-24 h-24 rounded-lg object-cover shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <h4 className="font-display text-lg text-white truncate">{post.titulo}</h4>
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-body shrink-0 ${
+                        post.ativo ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+                      }`}>
+                        {post.ativo ? '✓ Publicado' : '📝 Rascunho'}
+                      </span>
+                    </div>
+                    <p className="font-body text-xs text-white/40">/blog/{gerarSlug(post.titulo)}</p>
+                    {post.blog_authors && (
+                      <p className="font-body text-xs text-white/50 mt-2">
+                        Por <strong>{post.blog_authors.nome}</strong>
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      onClick={() => handleEdit(post)}
+                      className="p-2 rounded-lg bg-dark-300 hover:bg-blue-500/20 text-blue-400 transition-colors"
+                      title="Editar"
+                    >
+                      <Icon.Edit />
+                    </button>
+                    <button
+                      onClick={() => handleToggleAtivo(post)}
+                      className="p-2 rounded-lg bg-dark-300 hover:bg-gold/20 text-gold transition-colors"
+                      title={post.ativo ? 'Despublicar' : 'Publicar'}
+                    >
+                      <Icon.Eye off={!post.ativo} />
+                    </button>
+                    <button
+                      onClick={() => handleDeletePost(post)}
+                      className="p-2 rounded-lg bg-dark-300 hover:bg-red-500/20 text-red-400 transition-colors"
+                      title="Excluir"
+                    >
+                      <Icon.Trash />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
+
+      {/* TAB: AUTORES */}
+      {tab === 'autores' && (
+        <>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-display text-3xl text-white">Autores</h2>
+              <p className="font-body text-white/40 text-sm mt-1">Cadastre autores para seus posts</p>
+            </div>
+            <button
+              onClick={() => {
+                setEditingAuthor(null);
+                setMostrarAuthorModal(true);
+              }}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gold text-dark font-body font-semibold text-sm
+                         hover:brightness-110 transition-all active:scale-95"
+            >
+              <Icon.Plus />
+              Novo Autor
+            </button>
+          </div>
+
+          {autores.length === 0 ? (
+            <div className="bg-dark-200 border border-dark-300 rounded-2xl p-12 text-center">
+              <p className="font-body text-white/40 text-sm">Nenhum autor cadastrado</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {autores.map((author) => (
+                <div
+                  key={author.id}
+                  className="bg-dark-200 border border-dark-300 rounded-xl p-6 text-center hover:border-white/20 transition-colors"
+                >
+                  {author.foto_url && (
+                    <img
+                      src={author.foto_url}
+                      alt={author.nome}
+                      className="w-24 h-24 rounded-full object-cover mx-auto mb-4 border-2 border-gold/20"
+                    />
+                  )}
+                  <h4 className="font-display text-lg text-white">{author.nome}</h4>
+                  {author.profissao && (
+                    <p className="font-body text-sm text-gold my-1">{author.profissao}</p>
+                  )}
+                  {author.bio && (
+                    <p className="font-body text-xs text-white/50 mt-3 line-clamp-2">{author.bio}</p>
+                  )}
+                  <div className="flex gap-2 mt-4 justify-center">
+                    <button
+                      onClick={() => {
+                        setEditingAuthor(author);
+                        setMostrarAuthorModal(true);
+                      }}
+                      className="p-2 rounded-lg bg-dark-300 hover:bg-blue-500/20 text-blue-400 transition-colors"
+                      title="Editar"
+                    >
+                      <Icon.Edit />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteAuthor(author)}
+                      className="p-2 rounded-lg bg-dark-300 hover:bg-red-500/20 text-red-400 transition-colors"
+                      title="Excluir"
+                    >
+                      <Icon.Trash />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Modal de Autores */}
+      <AbaAutoresModal
+        isOpen={mostrarAuthorModal}
+        onClose={() => {
+          setMostrarAuthorModal(false);
+          setEditingAuthor(null);
+        }}
+        onAuthorAdded={carregarAutores}
+        editingAuthor={editingAuthor}
+      />
     </div>
   );
 }
+
+
 
 export default function Dashboard() {
   const [sessao, setSessao] = useState(null);

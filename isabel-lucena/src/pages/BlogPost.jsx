@@ -22,10 +22,10 @@ export default function BlogPost() {
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        // Buscar post atual
+        // Buscar post atual com autor
         const { data, error } = await supabaseAnonRead
           .from('blog_posts')
-          .select('*')
+          .select('*, blog_authors(id, nome, profissao, foto_url, bio)')
           .eq('slug', slug)
           .eq('ativo', true)
           .single()
@@ -109,10 +109,12 @@ export default function BlogPost() {
               <Calendar size={14} className="text-gold" />
               <span>{formatDate(post.created_at)}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <User size={14} className="text-gold" />
-              <span>{post.autor}</span>
-            </div>
+            {post.blog_authors && (
+              <div className="flex items-center gap-2">
+                <User size={14} className="text-gold" />
+                <span>{post.blog_authors.nome}</span>
+              </div>
+            )}
           </div>
 
           {/* Título */}
@@ -138,6 +140,31 @@ export default function BlogPost() {
                        prose-img:rounded-2xl prose-img:my-8"
             dangerouslySetInnerHTML={{ __html: post.conteudo }}
           />
+
+          {/* About the Author */}
+          {post.blog_authors && (
+            <div className="mt-12 pt-8 border-t border-dark-300">
+              <h3 className="font-display text-xl text-white mb-6">Sobre o Autor</h3>
+              <div className="flex gap-6 items-start">
+                {post.blog_authors.foto_url && (
+                  <img
+                    src={post.blog_authors.foto_url}
+                    alt={post.blog_authors.nome}
+                    className="w-24 h-24 rounded-full object-cover border-2 border-gold/20 shrink-0"
+                  />
+                )}
+                <div className="flex-1">
+                  <h4 className="font-display text-lg text-gold">{post.blog_authors.nome}</h4>
+                  {post.blog_authors.profissao && (
+                    <p className="font-body text-sm text-white/70 mb-2">{post.blog_authors.profissao}</p>
+                  )}
+                  {post.blog_authors.bio && (
+                    <p className="font-body text-sm text-white/60">{post.blog_authors.bio}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* CTA de contato */}
