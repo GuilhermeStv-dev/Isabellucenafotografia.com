@@ -47,7 +47,9 @@ export default function GalleryPage() {
           <p className="text-white/40 mb-4">Categoria não encontrada.</p>
           <Link to="/trabalhos" className="btn-outline inline-flex items-center gap-2 btn-arrow-hover">
             Voltar
-            <ArrowRight size={14} className="arrow-icon" />
+            <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
+              <ArrowRight size={14} />
+            </span>
           </Link>
         </div>
       </div>
@@ -79,7 +81,7 @@ export default function GalleryPage() {
               alt={category.label}
               placeholder={heroCoverPhoto?.placeholder}
               loading="eager"
-              fetchPriority="high"
+              fetchpriority="high"
               decoding="async"
               className="w-full h-full object-cover opacity-50"
               onError={(event) => {

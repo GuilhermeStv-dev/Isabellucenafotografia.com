@@ -104,7 +104,7 @@ export default function Trabalhos() {
           alt=""
           className="absolute inset-0 w-full h-full object-cover opacity-50"
           loading="eager"
-          fetchPriority="high"
+          fetchpriority="high"
           decoding="async"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/50 to-transparent" />

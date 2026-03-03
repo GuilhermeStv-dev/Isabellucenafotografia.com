@@ -62,7 +62,7 @@ function PhotoCard({ photo, onClick, onLoadComplete }) {
           alt=""
           placeholder={photo.placeholder}
           loading="lazy"
-          fetchPriority="low"
+          fetchpriority="low"
           decoding="async"
           onLoad={completeLoad}
           onError={handleError}

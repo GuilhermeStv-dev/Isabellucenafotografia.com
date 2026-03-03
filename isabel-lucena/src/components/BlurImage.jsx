@@ -56,7 +56,7 @@ function BlurImage({
         sizes={sizes}
         alt={alt}
         loading={loading}
-        fetchPriority={fetchPriority}
+        fetchpriority={fetchPriority}
         decoding={decoding}
         onLoad={handleLoad}
         onError={handleError}

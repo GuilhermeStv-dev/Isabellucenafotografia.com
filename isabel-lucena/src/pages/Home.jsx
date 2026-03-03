@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
 import BlurImage from '../components/BlurImage'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
+import { smoothHorizontalScrollTo, smoothScrollToId } from '../lib/smoothScroll'
 import FotoIsabel from '../assets/foto-isabel.webp'
 import FotoIsabel2 from '../assets/Foto-isabel-2.webp'
 import FotoIsabel3 from '../assets/Foto-isabel3.webp'
@@ -255,7 +256,7 @@ export default function Home() {
   )
 
   const scrollTo = (id) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    smoothScrollToId(id)
   }
 
   useEffect(() => {
@@ -297,7 +298,7 @@ export default function Home() {
             alt="Isabel Lucena Fotografia"
             className="w-full h-full object-cover object-top md:object-right"
             loading="eager"
-            fetchPriority="high"
+            fetchpriority="high"
             decoding="async"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-dark via-dark/60 to-dark/20 md:hidden" />
@@ -350,13 +351,15 @@ export default function Home() {
                            active:scale-95 min-h-[44px] btn-arrow-hover"
               >
                 Agendar sessão
-                <ArrowRight size={14} className="arrow-icon" />
+                <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
+                  <ArrowRight size={14} />
+                </span>
               </a>
               <button
                 onClick={() => scrollTo('trabalhos-home')}
                 className="inline-flex items-center gap-2 px-6 py-3 rounded-full
-                           border border-white/25 text-white/80 font-body text-sm
-                           transition-all duration-300 hover:border-white/60 hover:text-white
+                           border-2 border-white/25 text-white/80 font-body text-sm
+                           transition-all duration-300 hover:border-gold/80 hover:text-white
                            active:scale-95 min-h-[44px]"
               >
                 Ver trabalhos
@@ -389,11 +392,17 @@ export default function Home() {
           onClick={() => scrollTo('trabalhos-home')}
           aria-label="Scroll para baixo"
           className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10
-                     text-white/30 hover:text-gold transition-colors
-                     hidden md:flex flex-col items-center gap-1.5"
+                     text-white/45 hover:text-gold transition-colors
+                     hidden md:flex flex-col items-center"
         >
-          <span className="font-body text-[10px] tracking-widest uppercase">Scroll</span>
-          <div className="w-px h-8 bg-gradient-to-b from-white/30 to-transparent animate-pulse" />
+          <div className="scroll-v-stack scroll-float-loop" aria-hidden="true">
+            <svg viewBox="0 0 16 10" fill="none" className="scroll-v scroll-v-top">
+              <path d="M2 2L8 8L14 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <svg viewBox="0 0 16 10" fill="none" className="scroll-v scroll-v-bottom">
+              <path d="M2 2L8 8L14 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
         </button>
       </section>
 
@@ -431,12 +440,14 @@ export default function Home() {
               style={revealStyle(120)}
               to="/trabalhos"
               className="shrink-0 inline-flex items-center gap-2 px-4 md:px-5 py-2.5 rounded-full
-                         border border-white/20 text-white/60 font-body text-xs md:text-sm
+                         border-2 border-white/20 text-white/60 font-body text-xs md:text-sm
                          transition-all duration-300 hover:border-gold/50 hover:text-white
                          min-h-[44px] btn-arrow-hover"
             >
               Ver todos
-              <ArrowRight size={14} className="arrow-icon" />
+              <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
+                <ArrowRight size={14} />
+              </span>
             </Link>
           </div>
 
@@ -494,7 +505,7 @@ export default function Home() {
                         const el = carouselRef.current
                         if (!el) return
                         const cardWidth = el.firstChild?.offsetWidth || 0
-                        el.scrollTo({ left: i * (cardWidth + 12), behavior: 'smooth' })
+                        smoothHorizontalScrollTo(el, i * (cardWidth + 12), 700)
                       }}
                       className={`rounded-full transition-all duration-300 min-w-[8px] min-h-[8px]
                         ${activeCard === i
@@ -610,7 +621,9 @@ export default function Home() {
                              active:scale-95 min-h-[44px] btn-arrow-hover"
                 >
                   Falar com Isabel
-                  <ArrowRight size={14} className="arrow-icon" />
+                  <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
+                    <ArrowRight size={14} />
+                  </span>
                 </a>
               </div>
             </div>
@@ -707,10 +720,10 @@ export default function Home() {
                   ...revealStyle(80),
                   fontSize: 'clamp(1.7rem, 5vw, 3rem)',
                 }}
-                className="font-display font-light text-white mb-4"
+                className="font-display font-light text-white leading-[1.08] md:leading-[1.06] mb-4"
               >
                 Pronta para preservar{' '}
-                <em className="not-italic font-semibold text-gold">seus momentos?</em>
+                <em className="not-italic font-semibold text-gold whitespace-nowrap">seus momentos?</em>
               </h2>
               <p data-reveal style={revealStyle(160)}
                 className="font-body text-white/50 text-sm leading-relaxed mb-8">
@@ -727,16 +740,18 @@ export default function Home() {
                              active:scale-95 min-h-[44px] btn-arrow-hover"
                 >
                   Agendar sessão
-                  <ArrowRight size={14} className="arrow-icon" />
+                  <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
+                    <ArrowRight size={14} />
+                  </span>
                 </a>
                 <Link
                   to="/trabalhos"
                   className="inline-flex items-center gap-2 px-6 py-3 rounded-full
-                             border border-white/20 text-white/70 font-body text-sm
-                             transition-all duration-300 hover:border-white/50 hover:text-white
+                             border-2 border-white/20 text-white/70 font-body text-sm
+                             transition-all duration-300 hover:border-gold/80 hover:text-white
                              active:scale-95 min-h-[44px]"
                 >
-                  Ver portfólio
+                  Ver trabalhos
                 </Link>
               </div>
             </div>

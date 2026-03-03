@@ -67,13 +67,10 @@ export default function Header() {
                 key={to}
                 to={to}
                 className={`
-                  relative font-body text-sm tracking-wide pb-0.5
-                  transition-colors duration-250
-                  after:absolute after:bottom-0 after:left-0 after:h-[1px] after:bg-gold
-                  after:transition-all after:duration-300
+                  nav-load-link font-body text-sm tracking-wide
                   ${isActive(to)
-                    ? 'text-gold after:w-full'
-                    : 'text-white/70 hover:text-white after:w-0 hover:after:w-full'
+                    ? 'is-active text-gold'
+                    : 'text-white/70 hover:text-white'
                   }
                 `}
               >
@@ -89,13 +86,14 @@ export default function Header() {
             rel="noopener noreferrer"
             className="hidden md:inline-flex items-center gap-2
                        px-5 py-2.5 rounded-full
-                       border border-white/20 text-white/80 font-body text-sm
-                       transition-all duration-300
-                       hover:bg-gold hover:border-gold hover:text-dark
+                       bg-gold text-dark font-body font-semibold text-sm
+                       transition-all duration-300 hover:brightness-110
                        active:scale-95 btn-arrow-hover"
           >
             Contato
-            <ArrowRight size={14} className="arrow-icon" />
+            <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
+              <ArrowRight size={14} />
+            </span>
           </a>
 
           {/* Botão hamburger — mobile */}
@@ -197,7 +195,9 @@ export default function Header() {
                        transition-all duration-250 active:scale-95 min-h-[52px] btn-arrow-hover"
           >
             Falar no WhatsApp
-            <ArrowRight size={14} className="arrow-icon" />
+            <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
+              <ArrowRight size={14} />
+            </span>
           </a>
           <p className="font-body text-[11px] text-white/20 text-center mt-4">
             São José do Egito · PE

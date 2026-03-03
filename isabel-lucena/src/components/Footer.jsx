@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import LogoBranca from '../assets/Logo-horzontal-branca.webp';
 import LogoPreta from '../assets/Logo-horzontal-preta.webp';
+import { smoothScrollToTarget, smoothScrollToTop } from '../lib/smoothScroll';
 
 const TikTokIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -17,9 +18,9 @@ const InstagramIcon = () => (
 const scrollToTop = () => {
   const hero = document.getElementById('hero');
   if (hero) {
-    hero.scrollIntoView({ behavior: 'smooth' });
+    smoothScrollToTarget(hero);
   } else {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    smoothScrollToTop();
   }
 };
 
@@ -108,6 +109,7 @@ export default function Footer() {
               onClick={scrollToTop}
               aria-label="Voltar ao topo"
               className="
+                back-to-top-btn
                 w-12 h-12 rounded-full border border-gold/40
                 flex items-center justify-center
                 text-gold hover:bg-gold hover:text-dark
@@ -122,7 +124,7 @@ export default function Footer() {
                 height="16"
                 viewBox="0 0 16 16"
                 fill="none"
-                className="transition-transform duration-300 group-hover:-translate-y-0.5"
+                className="back-to-top-icon transition-transform duration-300 group-hover:-translate-y-0.5"
               >
                 <path d="M8 12V4M8 4L4 8M8 4L12 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
