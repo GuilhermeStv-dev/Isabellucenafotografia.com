@@ -345,10 +345,7 @@ export default function Home() {
                 href="https://wa.me/5587988449536"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full
-                           bg-gold text-dark font-body font-semibold text-sm
-                           transition-all duration-300 hover:brightness-110
-                           active:scale-95 min-h-[44px] btn-arrow-hover"
+                className="btn-gold min-h-[44px] btn-arrow-hover"
               >
                 Agendar sessão
                 <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
@@ -357,10 +354,7 @@ export default function Home() {
               </a>
               <button
                 onClick={() => scrollTo('trabalhos-home')}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-full
-                           border-2 border-white/25 text-white/80 font-body text-sm
-                           transition-all duration-300 hover:border-gold/80 hover:text-white
-                           active:scale-95 min-h-[44px]"
+                className="btn-outline min-h-[44px]"
               >
                 Ver trabalhos
               </button>
@@ -439,9 +433,7 @@ export default function Home() {
               data-reveal
               style={revealStyle(120)}
               to="/trabalhos"
-              className="shrink-0 inline-flex items-center gap-2 px-4 md:px-5 py-2.5 rounded-full
-                         border-2 border-white/20 text-white/60 font-body text-xs md:text-sm
-                         transition-all duration-300 hover:border-gold/50 hover:text-white
+              className="btn-outline shrink-0 px-4 md:px-5 py-2.5 text-xs md:text-sm
                          min-h-[44px] btn-arrow-hover"
             >
               Ver todos
@@ -615,10 +607,7 @@ export default function Home() {
                   href="https://wa.me/5587988449536"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full
-                             bg-gold text-dark font-body font-semibold text-sm
-                             transition-all duration-300 hover:brightness-110
-                             active:scale-95 min-h-[44px] btn-arrow-hover"
+                  className="btn-gold min-h-[44px] btn-arrow-hover"
                 >
                   Falar com Isabel
                   <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
@@ -734,10 +723,7 @@ export default function Home() {
                   href="https://wa.me/5587988449536"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full
-                             bg-gold text-dark font-body font-semibold text-sm
-                             transition-all duration-300 hover:brightness-110
-                             active:scale-95 min-h-[44px] btn-arrow-hover"
+                  className="btn-gold min-h-[44px] btn-arrow-hover"
                 >
                   Agendar sessão
                   <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
@@ -746,10 +732,7 @@ export default function Home() {
                 </a>
                 <Link
                   to="/trabalhos"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full
-                             border-2 border-white/20 text-white/70 font-body text-sm
-                             transition-all duration-300 hover:border-gold/80 hover:text-white
-                             active:scale-95 min-h-[44px]"
+                  className="btn-outline min-h-[44px]"
                 >
                   Ver trabalhos
                 </Link>

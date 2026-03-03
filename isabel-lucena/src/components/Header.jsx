@@ -84,11 +84,7 @@ export default function Header() {
             href="https://wa.me/5587988449536"
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden md:inline-flex items-center gap-2
-                       px-5 py-2.5 rounded-full
-                       bg-gold text-dark font-body font-semibold text-sm
-                       transition-all duration-300 hover:brightness-110
-                       active:scale-95 btn-arrow-hover"
+            className="btn-gold hidden md:inline-flex px-5 py-2.5 btn-arrow-hover"
           >
             Contato
             <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
@@ -190,9 +186,8 @@ export default function Header() {
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center justify-center gap-2
-                       py-4 rounded-2xl
-                       bg-gold text-dark font-body font-semibold text-sm
-                       transition-all duration-250 active:scale-95 min-h-[52px] btn-arrow-hover"
+                       py-4 !rounded-2xl
+                       btn-gold transition-all duration-250 min-h-[52px] btn-arrow-hover"
           >
             Falar no WhatsApp
             <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
