@@ -393,7 +393,7 @@ function BlogSection() {
           </div>
         ) : (
           <div className="px-5 md:px-8 text-center py-12">
-            <p className="font-body text-white/50">Nenhum post publicado ainda</p>
+            <p className="font-body text-white/50">Nenhum post publicado</p>
           </div>
         )}
       </div>
