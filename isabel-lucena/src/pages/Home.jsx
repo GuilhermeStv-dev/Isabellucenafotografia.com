@@ -226,14 +226,6 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
-const getOptimizedAuthorPhoto = (url) => {
-  if (!url) return ''
-  if (!url.includes('/storage/v1/object/public/blog-images/')) return url
-  const baseUrl = url.replace('/storage/v1/object/public/blog-images/', '/storage/v1/render/image/public/blog-images/')
-  const separator = baseUrl.includes('?') ? '&' : '?'
-  return `${baseUrl}${separator}width=160&height=160&quality=100&resize=cover`
-}
-
 /* ═══════════════════════════════════════════════════
    BLOG SECTION COMPONENT
 ═══════════════════════════════════════════════════ */
@@ -251,9 +243,6 @@ function BlogSection() {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        console.log('🔍 BlogSection: Iniciando fetch de posts...')
-        
-        // Query com join de autores
         const { data, error: err } = await supabaseAnonRead
           .from('blog_posts')
           .select('id, titulo, slug, excerpt, imagem_capa, created_at, ativo, autor_id, blog_authors(id, nome, profissao, foto_url)')
@@ -261,14 +250,10 @@ function BlogSection() {
           .order('created_at', { ascending: false })
           .limit(3)
 
-        console.log('📦 BlogSection: Posts -', data)
-        console.log('📦 BlogSection: Erro -', err)
-        
         if (err) {
-          console.error('❌ BlogSection: Erro na query -', err.message, err.code)
+          console.error('❌ BlogSection: Erro na query -', err)
         }
         
-        console.log('✅ BlogSection: Posts carregados -', data?.length || 0)
         setPosts(data || [])
       } catch (err) {
         console.error('❌ BlogSection: Catch error -', err)
@@ -384,10 +369,15 @@ function BlogSection() {
                     to={`/blog/${post.slug}`}
                     className="flex items-center gap-2 mt-2 pt-3 border-t border-dark-300 hover:text-gold transition-colors"
                   >
-                    {post.blog_authors?.foto_url ? (
+                    {post.blog_authors?.foto_url && typeof post.blog_authors.foto_url === 'string' && post.blog_authors.foto_url.trim() ? (
                       <img
-                        src={getOptimizedAuthorPhoto(post.blog_authors.foto_url)}
+                        src={post.blog_authors.foto_url}
                         alt={post.blog_authors.nome}
+                        onError={(e) => {
+                          console.error('❌ Erro ao carregar foto do autor:', e.target.src)
+                          e.target.style.display = 'none'
+                        }}
+                        onLoad={() => console.log('✅ Foto carregada:', post.blog_authors.nome)}
                         className="w-10 h-10 rounded-full object-cover border border-white/20 group-hover:border-gold/70 transition-colors shrink-0"
                       />
                     ) : (
