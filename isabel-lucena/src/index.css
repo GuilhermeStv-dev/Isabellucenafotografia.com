@@ -130,6 +130,11 @@
   transform: rotate(-45deg);
 }
 
+/* Animação da seta para botão outline */
+.btn-outline.btn-arrow-hover:hover .arrow-icon {
+  color: #C9A96E;
+}
+
 .back-to-top-btn {
   transition: background-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease !important;
 }
