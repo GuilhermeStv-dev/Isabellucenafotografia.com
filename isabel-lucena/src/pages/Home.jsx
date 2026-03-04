@@ -288,11 +288,12 @@ function BlogSection() {
         // Usar dados disponíveis
         const finalData = withAuthors || activePosts || allPosts
         console.log('🎯 BlogSection: Usando dados finais:', finalData?.length || 0, 'posts')
+        console.log('🎯 BlogSection: Objeto final:', finalData)
         setPosts(finalData || [])
+        setLoading(false)
         
       } catch (err) {
         console.error('❌ BlogSection: Erro geral:', err)
-      } finally {
         setLoading(false)
       }
     }
@@ -302,10 +303,20 @@ function BlogSection() {
 
   // Anima o grid assim que posts estão disponíveis
   useEffect(() => {
-    if (posts.length === 0) return
+    console.log('🎬 BlogSection: Efeito de animação rodando, posts:', posts.length)
+    if (posts.length === 0) {
+      console.log('⏸️ BlogSection: Sem posts, saindo do efeito')
+      return
+    }
 
     const el = blogGridRef.current
-    if (!el) return
+    console.log('📍 BlogSection: Ref do grid:', el)
+    if (!el) {
+      console.log('⚠️ BlogSection: Ref não encontrada!')
+      return
+    }
+    
+    console.log('✨ BlogSection: Animando grid, setando opacity=1 e transform=translateY(0)')
     el.style.opacity = '1'
     el.style.transform = 'translateY(0)'
   }, [posts.length])
@@ -350,7 +361,9 @@ function BlogSection() {
         </div>
 
         {posts.length > 0 ? (
-          <div
+          <>
+            {console.log('✅ BlogSection: Renderizando grid com', posts.length, 'posts')}
+            <div
             ref={blogGridRef}
             style={{
               opacity: 0,
@@ -415,7 +428,8 @@ function BlogSection() {
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          </>
         ) : loading ? (
           <div className="px-5 md:px-8 text-center py-12">
             <p className="font-body text-white/50">Carregando posts...</p>
