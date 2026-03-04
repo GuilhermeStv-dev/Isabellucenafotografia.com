@@ -234,11 +234,6 @@ function BlogSection() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const blogGridRef = useRef(null)
-  const [loadedCount, setLoadedCount] = useState(0)
-
-  const handlePostLoad = useCallback(() => {
-    setLoadedCount(c => c + 1)
-  }, [])
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -305,17 +300,15 @@ function BlogSection() {
     fetchPosts()
   }, [])
 
-  // Quando todos os cards carregarem, anima o grid inteiro
+  // Anima o grid assim que posts estão disponíveis
   useEffect(() => {
-    if (loading || posts.length === 0) return
-    const total = posts.length
-    if (loadedCount < total) return
+    if (posts.length === 0) return
 
     const el = blogGridRef.current
     if (!el) return
     el.style.opacity = '1'
     el.style.transform = 'translateY(0)'
-  }, [loadedCount, posts.length, loading])
+  }, [posts.length])
 
   return (
     <section className="py-14 md:py-24 bg-dark overflow-hidden">
@@ -380,8 +373,6 @@ function BlogSection() {
                     alt={post.titulo}
                     loading="lazy"
                     decoding="async"
-                    onLoad={handlePostLoad}
-                    onError={handlePostLoad}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                   <span className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white text-[10px]
