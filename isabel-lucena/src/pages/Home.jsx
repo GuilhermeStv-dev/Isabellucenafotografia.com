@@ -238,62 +238,36 @@ function BlogSection() {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        console.log('🔍 BlogSection: Iniciando diagnóstico completo...')
-        
         // Teste 1: Verificar estrutura da tabela blog_posts
-        console.log('📋 BlogSection: Verificando SCHEMA de blog_posts...')
         const { data: columns, error: colErr } = await supabaseAnonRead
           .from('information_schema.columns')
           .select('column_name, data_type')
           .eq('table_name', 'blog_posts')
         
-        console.log('📋 BlogSection: Colunas em blog_posts:', columns)
-        console.log('📋 BlogSection: Erro ao listar colunas:', colErr)
-        
         // Teste 2: Query simples sem join
-        console.log('📝 BlogSection: Teste 1 - Todos os posts (sem filtro, sem join)...')
         const { data: allPosts, error: allErr } = await supabaseAnonRead
           .from('blog_posts')
           .select('id, titulo, ativo, autor_id')
         
-        console.log('✅ BlogSection: Teste 1 resultado:', allPosts?.length || 0, 'posts')
-        console.log('❌ BlogSection: Teste 1 erro:', allErr)
-        if (allPosts?.length > 0) {
-          console.log('📌 BlogSection: Primeiro post:', allPosts[0])
-        }
-        
         // Teste 3: Query com ativo=true (sem join)
-        console.log('📝 BlogSection: Teste 2 - Posts ativos (sem join)...')
         const { data: activePosts, error: activeErr } = await supabaseAnonRead
           .from('blog_posts')
           .select('id, titulo, ativo, slug, excerpt, imagem_capa, autor_id')
           .eq('ativo', true)
         
-        console.log('✅ BlogSection: Teste 2 resultado:', activePosts?.length || 0, 'posts')
-        console.log('❌ BlogSection: Teste 2 erro:', activeErr)
-        
         // Teste 4: Query COM join
-        console.log('📝 BlogSection: Teste 3 - COM JOIN de autores...')
         const { data: withAuthors, error: joinErr } = await supabaseAnonRead
           .from('blog_posts')
           .select('*, blog_authors(id, nome, profissao, foto_url)')
           .eq('ativo', true)
         
-        console.log('✅ BlogSection: Teste 3 resultado:', withAuthors?.length || 0, 'posts')
-        console.log('❌ BlogSection: Teste 3 erro:', joinErr)
-        if (withAuthors?.length > 0) {
-          console.log('📌 BlogSection: Primeiro post COM author:', withAuthors[0])
-        }
-        
         // Usar dados disponíveis
         const finalData = withAuthors || activePosts || allPosts
-        console.log('🎯 BlogSection: Usando dados finais:', finalData?.length || 0, 'posts')
-        console.log('🎯 BlogSection: Objeto final:', finalData)
         setPosts(finalData || [])
         setLoading(false)
         
       } catch (err) {
-        console.error('❌ BlogSection: Erro geral:', err)
+        console.error('BlogSection: Erro ao carregar posts:', err)
         setLoading(false)
       }
     }
@@ -303,20 +277,10 @@ function BlogSection() {
 
   // Anima o grid assim que posts estão disponíveis
   useEffect(() => {
-    console.log('🎬 BlogSection: Efeito de animação rodando, posts:', posts.length)
-    if (posts.length === 0) {
-      console.log('⏸️ BlogSection: Sem posts, saindo do efeito')
-      return
-    }
+    if (posts.length === 0) return
 
     const el = blogGridRef.current
-    console.log('📍 BlogSection: Ref do grid:', el)
-    if (!el) {
-      console.log('⚠️ BlogSection: Ref não encontrada!')
-      return
-    }
-    
-    console.log('✨ BlogSection: Animando grid, setando opacity=1 e transform=translateY(0)')
+    if (!el) return
     el.style.opacity = '1'
     el.style.transform = 'translateY(0)'
   }, [posts.length])
@@ -362,7 +326,6 @@ function BlogSection() {
 
         {posts.length > 0 ? (
           <>
-            {console.log('✅ BlogSection: Renderizando grid com', posts.length, 'posts')}
             <div
             ref={blogGridRef}
             style={{
@@ -375,10 +338,12 @@ function BlogSection() {
             {posts.map((post, i) => (
               <div
                 key={post.id}
-                data-reveal
-                style={revealStyle(i * 100)}
                 className="group flex flex-col rounded-2xl overflow-hidden bg-dark-200 border border-dark-300
                            transition-all duration-500 hover:scale-[1.02] hover:border-gold/60"
+                style={{
+                  opacity: 1,
+                  animation: `fadeIn 0.6s ease-out ${i * 80}ms forwards`,
+                }}
               >
                 <div className="relative overflow-hidden aspect-[4/3]">
                   <img
