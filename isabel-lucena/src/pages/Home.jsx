@@ -410,24 +410,6 @@ function BlogSection() {
 }
 
 /* ═══════════════════════════════════════════════════
-   DEPOIMENTOS
-═══════════════════════════════════════════════════ */
-const DEPOIMENTOS = [
-  {
-    id: 1, nome: 'Ana Carolina', sessao: 'Ensaio de Grávida', estrelas: 5,
-    texto: 'Isabel capturou exatamente o que eu queria: leveza, emoção e beleza. As fotos ficaram perfeitas, chorei quando vi o resultado!',
-  },
-  {
-    id: 2, nome: 'Fernanda & Lucas', sessao: 'Casamento', estrelas: 5,
-    texto: 'Desde o primeiro contato soubemos que era a fotógrafa certa. Atenção a cada detalhe, sensibilidade e profissionalismo impecável.',
-  },
-  {
-    id: 3, nome: 'Mariana Silva', sessao: 'Ensaio Feminino', estrelas: 5,
-    texto: 'Nunca me senti tão à vontade em um ensaio. Isabel tem o dom de deixar a gente natural e o resultado prova isso.',
-  },
-]
-
-/* ═══════════════════════════════════════════════════
    HOME
 ═══════════════════════════════════════════════════ */
 export default function Home() {
@@ -810,68 +792,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-
-      {/* ─────────────────────────────────────────────────────
-          4 · DEPOIMENTOS (DESATIVADO - Dados a serem coletados futuramente)
-      ───────────────────────────────────────────────────── */}
-      {/* <section className="py-14 md:py-24 bg-dark overflow-hidden">
-        <div className="max-w-6xl mx-auto px-5 md:px-8">
-
-          <div className="text-center mb-10 md:mb-14">
-            <p data-reveal style={revealStyle(0)}
-              className="font-body text-gold text-[10px] tracking-[0.3em] uppercase mb-2">
-              Depoimentos
-            </p>
-            <h2
-              data-reveal
-              style={{
-                ...revealStyle(80),
-                fontSize: 'clamp(1.7rem, 4.5vw, 2.8rem)',
-              }}
-              className="font-display font-light text-white"
-            >
-              O que dizem{' '}
-              <em className="not-italic font-semibold text-gold">minhas clientes</em>
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-            {DEPOIMENTOS.map((dep, i) => (
-              <div
-                key={dep.id}
-                data-reveal
-                style={revealStyle(i * 100)}
-                className="bg-dark-100 border border-dark-300 rounded-2xl p-6 md:p-7
-                           flex flex-col gap-4"
-              >
-                <div className="flex gap-0.5">
-                  {Array.from({ length: dep.estrelas }).map((_, j) => (
-                    <svg key={j} width="13" height="13" viewBox="0 0 24 24" fill="#C9A96E">
-                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                    </svg>
-                  ))}
-                </div>
-                <p className="font-body text-white/65 text-sm leading-relaxed flex-1">
-                  "{dep.texto}"
-                </p>
-                <div className="flex items-center gap-3 pt-1 border-t border-dark-300">
-                  <div className="w-9 h-9 rounded-full bg-gold/15 border border-gold/25
-                                  flex items-center justify-center shrink-0">
-                    <span className="font-display text-gold text-sm font-semibold">
-                      {dep.nome[0]}
-                    </span>
-                  </div>
-                  <div>
-                    <p className="font-body text-white text-sm font-medium">{dep.nome}</p>
-                    <p className="font-body text-white/35 text-xs">{dep.sessao}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section> */}
 
 
       {/* ─────────────────────────────────────────────────────
