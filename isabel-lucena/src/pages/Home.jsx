@@ -243,6 +243,7 @@ function BlogSection() {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
+        console.log('🔍 BlogSection: Iniciando fetch...')
         const { data, error: err } = await supabaseAnonRead
           .from('blog_posts')
           .select('*, blog_authors(nome, profissao, foto_url)')
@@ -250,10 +251,14 @@ function BlogSection() {
           .order('created_at', { ascending: false })
           .limit(3)
 
+        console.log('✅ BlogSection: Posts carregados -', data?.length || 0, 'posts')
+        console.log('📋 BlogSection: Dados -', data)
+        console.log('❌ BlogSection: Erro -', err)
+        
         if (err) throw err
         setPosts(data || [])
       } catch (err) {
-        console.error('Erro ao carregar posts:', err)
+        console.error('❌ BlogSection: Erro ao carregar:', err)
       } finally {
         setLoading(false)
       }
@@ -382,12 +387,14 @@ function BlogSection() {
               </div>
             ))}
           </div>
+        ) : loading ? (
+          <div className="px-5 md:px-8 text-center py-12">
+            <p className="font-body text-white/50">Carregando posts...</p>
+          </div>
         ) : (
-          !loading && (
-            <div className="px-5 md:px-8 text-center py-12">
-              <p className="font-body text-white/50">Nenhum post publicado ainda</p>
-            </div>
-          )
+          <div className="px-5 md:px-8 text-center py-12">
+            <p className="font-body text-white/50">Nenhum post publicado ainda</p>
+          </div>
         )}
       </div>
     </section>
