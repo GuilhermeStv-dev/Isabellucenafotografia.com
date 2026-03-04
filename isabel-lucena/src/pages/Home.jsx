@@ -253,10 +253,10 @@ function BlogSection() {
       try {
         console.log('🔍 BlogSection: Iniciando fetch de posts...')
         
-        // Query simples sem join para diagnosticar
+        // Query com join de autores
         const { data, error: err } = await supabaseAnonRead
           .from('blog_posts')
-          .select('id, titulo, slug, excerpt, imagem_capa, created_at, ativo')
+          .select('id, titulo, slug, excerpt, imagem_capa, created_at, ativo, autor_id, blog_authors(id, nome, profissao, foto_url)')
           .eq('ativo', true)
           .order('created_at', { ascending: false })
           .limit(3)
@@ -384,11 +384,22 @@ function BlogSection() {
                     to={`/blog/${post.slug}`}
                     className="flex items-center gap-2 mt-2 pt-3 border-t border-dark-300 hover:text-gold transition-colors"
                   >
-                    <div className="w-10 h-10 rounded-full bg-dark-300 border border-white/20 group-hover:border-gold/70 transition-colors flex items-center justify-center shrink-0">
-                      <User size={12} className="text-white/50" />
-                    </div>
+                    {post.blog_authors?.foto_url ? (
+                      <img
+                        src={getOptimizedAuthorPhoto(post.blog_authors.foto_url)}
+                        alt={post.blog_authors.nome}
+                        className="w-10 h-10 rounded-full object-cover border border-white/20 group-hover:border-gold/70 transition-colors shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-dark-300 border border-white/20 group-hover:border-gold/70 transition-colors flex items-center justify-center shrink-0">
+                        <User size={12} className="text-white/50" />
+                      </div>
+                    )}
                     <div className="min-w-0">
-                      <p className="font-body text-white/70 text-xs truncate">Isabel Lucena</p>
+                      <p className="font-body text-white/70 text-xs truncate">{post.blog_authors?.nome || 'Isabel Lucena'}</p>
+                      {post.blog_authors?.profissao && (
+                        <p className="font-body text-white/45 text-[11px] truncate">{post.blog_authors.profissao}</p>
+                      )}
                     </div>
                   </Link>
                 </div>
