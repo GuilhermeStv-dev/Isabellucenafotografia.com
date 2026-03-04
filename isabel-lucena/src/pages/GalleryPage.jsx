@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Eye, Heart } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
@@ -24,7 +24,7 @@ export default function GalleryPage() {
 
   useEffect(() => {
     if (!categoryId) return
-    ensureCategoryPhotosLoaded(categoryId, { force: true })
+    ensureCategoryPhotosLoaded(categoryId)
   }, [categoryId, ensureCategoryPhotosLoaded])
 
   useEffect(() => {
@@ -64,8 +64,14 @@ export default function GalleryPage() {
       })
     : null
 
-  const totalViews = categoryPhotos.reduce((s, p) => s + (p.views || 0), 0)
-  const totalLikes = categoryPhotos.reduce((s, p) => s + (p.likes || 0), 0)
+  const totalViews = useMemo(() =>
+    categoryPhotos.reduce((s, p) => s + (p.views || 0), 0),
+    [categoryPhotos]
+  )
+  const totalLikes = useMemo(() =>
+    categoryPhotos.reduce((s, p) => s + (p.likes || 0), 0),
+    [categoryPhotos]
+  )
 
   return (
     <div className="bg-dark min-h-screen">
