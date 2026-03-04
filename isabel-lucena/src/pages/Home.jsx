@@ -751,18 +751,16 @@ export default function Home() {
               >
                 Apaixonada por <br />
                 <em className="not-italic font-semibold text-gold">contar histórias</em>
-                <br />com a câmera
               </h2>
 
               <p data-reveal style={revealStyle(180)}
                 className="font-body text-white/55 text-sm md:text-base leading-relaxed mb-4">
                 Sou Isabel Lucena, fotógrafa baseada em São José do Egito, Pernambuco. Com mais de 7 anos de experiência,
-                especializo-me em transformar momentos únicos em memórias eternas.
+                acredito que a fotografia tem o poder de transformar momentos únicos em memórias eternas.
               </p>
               <p data-reveal style={revealStyle(220)}
                 className="font-body text-white/40 text-sm leading-relaxed mb-8">
-                Cada sessão é planejada com atenção aos mínimos detalhes — da iluminação ao pós-processamento —
-                para entregar imagens que te fazem sentir a emoção novamente.
+                Cada ensaio é planejado com atenção aos mínimos detalhes, da iluminação ao pós-processamento, para entregar não apenas imagens mas um momento da sua vida marcado em um frame.
               </p>
 
               <div data-reveal style={revealStyle(280)}>
