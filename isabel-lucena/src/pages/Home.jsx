@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useMemo, memo, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Calendar, User } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
+import { supabaseAnonRead } from '../lib/supabase'
 import BlurImage from '../components/BlurImage'
 import { getResponsiveImageSources } from '../lib/imageOptimization'
 import { smoothHorizontalScrollTo, smoothScrollToId } from '../lib/smoothScroll'
@@ -215,6 +216,168 @@ const MobileCarouselCard = memo(({ cat, coverPhoto, index }) => {
   )
 })
 MobileCarouselCard.displayName = 'MobileCarouselCard'
+
+/* ═══════════════════════════════════════════════════
+   BLOG CARD
+═══════════════════════════════════════════════════ */
+
+const formatDate = (dateString) => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
+const getOptimizedAuthorPhoto = (url) => {
+  if (!url) return ''
+  if (!url.includes('/storage/v1/object/public/blog-images/')) return url
+  const baseUrl = url.replace('/storage/v1/object/public/blog-images/', '/storage/v1/render/image/public/blog-images/')
+  const separator = baseUrl.includes('?') ? '&' : '?'
+  return `${baseUrl}${separator}width=160&height=160&quality=100&resize=cover`
+}
+
+function BlogCard({ post, delay }) {
+  const authorName = post.blog_authors?.nome || 'Isabel Lucena Fotografia'
+  const authorRole = post.blog_authors?.profissao || ''
+  const authorPhoto = getOptimizedAuthorPhoto(post.blog_authors?.foto_url || '')
+
+  return (
+    <Link
+      to={`/blog/${post.slug}`}
+      data-reveal
+      style={revealStyle(delay)}
+      className="group flex flex-col rounded-2xl overflow-hidden bg-dark-200 border border-dark-300
+             transition-all duration-500 hover:scale-[1.02] hover:border-gold/60"
+    >
+      <div className="relative overflow-hidden aspect-[4/3]">
+        <img
+          src={post.imagem_capa}
+          alt={post.titulo}
+          loading="lazy"
+          decoding="async"
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+        />
+        <span className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white text-[10px]
+                         font-body px-2 py-1 rounded-full flex items-center gap-1">
+          <Calendar size={10} />
+          {formatDate(post.created_at)}
+        </span>
+      </div>
+
+      <div className="flex flex-col flex-1 p-4 gap-2">
+        <h3 className="font-body font-bold text-white text-sm leading-snug line-clamp-2">
+          {post.titulo}
+        </h3>
+        <p className="font-body text-white/50 text-xs leading-relaxed flex-1 line-clamp-3">
+          {post.excerpt}
+        </p>
+
+        <div className="flex items-center gap-2 mt-2 pt-3 border-t border-dark-300">
+          {authorPhoto ? (
+            <img
+              src={authorPhoto}
+              alt={authorName}
+              className="w-10 h-10 rounded-full object-cover border border-white/20 group-hover:border-gold/70 transition-colors shrink-0"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-dark-300 border border-white/20 group-hover:border-gold/70 transition-colors flex items-center justify-center shrink-0">
+              <User size={12} className="text-white/50" />
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="font-body text-white/70 text-xs truncate">{authorName}</p>
+            {authorRole && (
+              <p className="font-body text-white/45 text-[11px] truncate">{authorRole}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+/* ═══════════════════════════════════════════════════
+   BLOG SECTION COMPONENT
+═══════════════════════════════════════════════════ */
+
+function BlogSection() {
+  const [posts, setPosts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const { data, error: err } = await supabaseAnonRead
+          .from('blog_posts')
+          .select('*, blog_authors(nome, profissao, foto_url)')
+          .eq('ativo', true)
+          .order('created_at', { ascending: false })
+          .limit(3)
+
+        if (err) throw err
+        setPosts(data || [])
+      } catch (err) {
+        console.error('Erro ao carregar posts:', err)
+        setError(true)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPosts()
+  }, [])
+
+  if (loading || error) return null
+
+  if (!posts.length) return null
+
+  return (
+    <section className="py-14 md:py-24 bg-dark overflow-hidden">
+      <div className="max-w-6xl mx-auto">
+        <div className="px-5 md:px-8 flex items-end justify-between gap-4 mb-8 md:mb-10">
+          <div>
+            <p
+              data-reveal
+              style={revealStyle(0)}
+              className="font-body text-gold text-[10px] tracking-[0.3em] uppercase mb-2"
+            >
+              Conteúdo
+            </p>
+            <h2
+              data-reveal
+              style={{
+                ...revealStyle(80),
+                fontSize: 'clamp(1.8rem, 5vw, 3rem)',
+              }}
+              className="font-display font-light text-white"
+            >
+              Meu{' '}
+              <em className="not-italic font-semibold text-gold">blog</em>
+            </h2>
+          </div>
+
+          <Link
+            data-reveal
+            style={revealStyle(120)}
+            to="/blog"
+            className="btn-outline shrink-0 px-4 md:px-5 py-2.5 text-xs md:text-sm
+                       min-h-[44px] btn-arrow-hover"
+          >
+            Ver todos
+            <span className="arrow-icon" style={{ display: 'inline-block', transition: 'transform 0.7s ease-out' }}>
+              <ArrowRight size={14} />
+            </span>
+          </Link>
+        </div>
+
+        <div className="px-5 md:px-8 grid grid-cols-1 md:grid-cols-3 gap-5">
+          {posts.map((post, i) => (
+            <BlogCard key={post.id} post={post} delay={i * 100} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
 
 /* ═══════════════════════════════════════════════════
    DEPOIMENTOS
@@ -622,9 +785,9 @@ export default function Home() {
 
 
       {/* ─────────────────────────────────────────────────────
-          4 · DEPOIMENTOS
+          4 · DEPOIMENTOS (DESATIVADO - Dados a serem coletados futuramente)
       ───────────────────────────────────────────────────── */}
-      <section className="py-14 md:py-24 bg-dark overflow-hidden">
+      {/* <section className="py-14 md:py-24 bg-dark overflow-hidden">
         <div className="max-w-6xl mx-auto px-5 md:px-8">
 
           <div className="text-center mb-10 md:mb-14">
@@ -680,11 +843,17 @@ export default function Home() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
 
       {/* ─────────────────────────────────────────────────────
-          5 · CTA FINAL
+          5 · BLOG
+      ───────────────────────────────────────────────────── */}
+      <BlogSection />
+
+
+      {/* ─────────────────────────────────────────────────────
+          6 · CTA FINAL
       ───────────────────────────────────────────────────── */}
       <section className="py-14 md:py-24 bg-dark-100 overflow-hidden">
         <div className="max-w-6xl mx-auto px-5 md:px-8">
