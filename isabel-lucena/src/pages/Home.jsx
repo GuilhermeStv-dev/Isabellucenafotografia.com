@@ -251,17 +251,27 @@ function BlogSection() {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
+        console.log('🔍 BlogSection: Iniciando fetch de posts...')
+        
+        // Query simples sem join para diagnosticar
         const { data, error: err } = await supabaseAnonRead
           .from('blog_posts')
-          .select('*, blog_authors(nome, profissao, foto_url)')
+          .select('id, titulo, slug, excerpt, imagem_capa, created_at, ativo')
           .eq('ativo', true)
           .order('created_at', { ascending: false })
           .limit(3)
 
-        if (err) throw err
+        console.log('📦 BlogSection: Posts -', data)
+        console.log('📦 BlogSection: Erro -', err)
+        
+        if (err) {
+          console.error('❌ BlogSection: Erro na query -', err.message, err.code)
+        }
+        
+        console.log('✅ BlogSection: Posts carregados -', data?.length || 0)
         setPosts(data || [])
       } catch (err) {
-        console.error('Erro ao carregar posts:', err)
+        console.error('❌ BlogSection: Catch error -', err)
       } finally {
         setLoading(false)
       }
@@ -340,15 +350,21 @@ function BlogSection() {
                            transition-all duration-500 hover:scale-[1.02] hover:border-gold/60"
               >
                 <div className="relative overflow-hidden aspect-[4/3]">
-                  <img
-                    src={post.imagem_capa}
-                    alt={post.titulo}
-                    loading="lazy"
-                    decoding="async"
-                    onLoad={handlePostLoad}
-                    onError={handlePostLoad}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
+                  {post.imagem_capa ? (
+                    <img
+                      src={post.imagem_capa}
+                      alt={post.titulo}
+                      loading="lazy"
+                      decoding="async"
+                      onLoad={handlePostLoad}
+                      onError={handlePostLoad}
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-dark-300 flex items-center justify-center">
+                      <p className="text-white/30 text-xs">Sem imagem</p>
+                    </div>
+                  )}
                   <span className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white text-[10px]
                                    font-body px-2 py-1 rounded-full flex items-center gap-1">
                     <Calendar size={10} />
@@ -368,34 +384,25 @@ function BlogSection() {
                     to={`/blog/${post.slug}`}
                     className="flex items-center gap-2 mt-2 pt-3 border-t border-dark-300 hover:text-gold transition-colors"
                   >
-                    {post.blog_authors?.foto_url ? (
-                      <img
-                        src={getOptimizedAuthorPhoto(post.blog_authors.foto_url)}
-                        alt={post.blog_authors.nome}
-                        className="w-10 h-10 rounded-full object-cover border border-white/20 group-hover:border-gold/70 transition-colors shrink-0"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-dark-300 border border-white/20 group-hover:border-gold/70 transition-colors flex items-center justify-center shrink-0">
-                        <User size={12} className="text-white/50" />
-                      </div>
-                    )}
+                    <div className="w-10 h-10 rounded-full bg-dark-300 border border-white/20 group-hover:border-gold/70 transition-colors flex items-center justify-center shrink-0">
+                      <User size={12} className="text-white/50" />
+                    </div>
                     <div className="min-w-0">
-                      <p className="font-body text-white/70 text-xs truncate">{post.blog_authors?.nome || 'Isabel Lucena'}</p>
-                      {post.blog_authors?.profissao && (
-                        <p className="font-body text-white/45 text-[11px] truncate">{post.blog_authors.profissao}</p>
-                      )}
+                      <p className="font-body text-white/70 text-xs truncate">Isabel Lucena</p>
                     </div>
                   </Link>
                 </div>
               </div>
             ))}
           </div>
+        ) : loading ? (
+          <div className="px-5 md:px-8 py-12">
+            <p className="font-body text-white/50 text-center">Carregando posts...</p>
+          </div>
         ) : (
-          !loading && (
-            <div className="px-5 md:px-8 text-center py-12">
-              <p className="font-body text-white/50">Nenhum post publicado ainda</p>
-            </div>
-          )
+          <div className="px-5 md:px-8 text-center py-12">
+            <p className="font-body text-white/50">Nenhum post publicado ainda</p>
+          </div>
         )}
       </div>
     </section>
