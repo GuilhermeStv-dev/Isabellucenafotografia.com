@@ -234,66 +234,6 @@ const getOptimizedAuthorPhoto = (url) => {
   return `${baseUrl}${separator}width=160&height=160&quality=100&resize=cover`
 }
 
-function BlogCard({ post, delay }) {
-  const authorName = post.blog_authors?.nome || 'Isabel Lucena Fotografia'
-  const authorRole = post.blog_authors?.profissao || ''
-  const authorPhoto = getOptimizedAuthorPhoto(post.blog_authors?.foto_url || '')
-
-  return (
-    <Link
-      to={`/blog/${post.slug}`}
-      data-reveal
-      style={revealStyle(delay)}
-      className="group flex flex-col rounded-2xl overflow-hidden bg-dark-200 border border-dark-300
-             transition-all duration-500 hover:scale-[1.02] hover:border-gold/60"
-    >
-      <div className="relative overflow-hidden aspect-[4/3]">
-        <img
-          src={post.imagem_capa}
-          alt={post.titulo}
-          loading="lazy"
-          decoding="async"
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-        />
-        <span className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white text-[10px]
-                         font-body px-2 py-1 rounded-full flex items-center gap-1">
-          <Calendar size={10} />
-          {formatDate(post.created_at)}
-        </span>
-      </div>
-
-      <div className="flex flex-col flex-1 p-4 gap-2">
-        <h3 className="font-body font-bold text-white text-sm leading-snug line-clamp-2">
-          {post.titulo}
-        </h3>
-        <p className="font-body text-white/50 text-xs leading-relaxed flex-1 line-clamp-3">
-          {post.excerpt}
-        </p>
-
-        <div className="flex items-center gap-2 mt-2 pt-3 border-t border-dark-300">
-          {authorPhoto ? (
-            <img
-              src={authorPhoto}
-              alt={authorName}
-              className="w-10 h-10 rounded-full object-cover border border-white/20 group-hover:border-gold/70 transition-colors shrink-0"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-dark-300 border border-white/20 group-hover:border-gold/70 transition-colors flex items-center justify-center shrink-0">
-              <User size={12} className="text-white/50" />
-            </div>
-          )}
-          <div className="min-w-0">
-            <p className="font-body text-white/70 text-xs truncate">{authorName}</p>
-            {authorRole && (
-              <p className="font-body text-white/45 text-[11px] truncate">{authorRole}</p>
-            )}
-          </div>
-        </div>
-      </div>
-    </Link>
-  )
-}
-
 /* ═══════════════════════════════════════════════════
    BLOG SECTION COMPONENT
 ═══════════════════════════════════════════════════ */
@@ -301,7 +241,12 @@ function BlogCard({ post, delay }) {
 function BlogSection() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
+  const blogGridRef = useRef(null)
+  const [loadedCount, setLoadedCount] = useState(0)
+
+  const handlePostLoad = useCallback(() => {
+    setLoadedCount(c => c + 1)
+  }, [])
 
   useEffect(() => {
     const fetchPosts = async () => {
@@ -317,7 +262,6 @@ function BlogSection() {
         setPosts(data || [])
       } catch (err) {
         console.error('Erro ao carregar posts:', err)
-        setError(true)
       } finally {
         setLoading(false)
       }
@@ -326,9 +270,17 @@ function BlogSection() {
     fetchPosts()
   }, [])
 
-  if (loading || error) return null
+  // Quando todos os cards carregarem, anima o grid inteiro
+  useEffect(() => {
+    if (loading || posts.length === 0) return
+    const total = posts.length
+    if (loadedCount < total) return
 
-  if (!posts.length) return null
+    const el = blogGridRef.current
+    if (!el) return
+    el.style.opacity = '1'
+    el.style.transform = 'translateY(0)'
+  }, [loadedCount, posts.length, loading])
 
   return (
     <section className="py-14 md:py-24 bg-dark overflow-hidden">
@@ -369,11 +321,82 @@ function BlogSection() {
           </Link>
         </div>
 
-        <div className="px-5 md:px-8 grid grid-cols-1 md:grid-cols-3 gap-5">
-          {posts.map((post, i) => (
-            <BlogCard key={post.id} post={post} delay={i * 100} />
-          ))}
-        </div>
+        {posts.length > 0 ? (
+          <div
+            ref={blogGridRef}
+            style={{
+              opacity: 0,
+              transform: 'translateY(28px)',
+              transition: 'opacity 0.7s cubic-bezier(0.25,0.46,0.45,0.94), transform 0.7s cubic-bezier(0.25,0.46,0.45,0.94)',
+            }}
+            className="px-5 md:px-8 grid grid-cols-1 md:grid-cols-3 gap-5"
+          >
+            {posts.map((post, i) => (
+              <div
+                key={post.id}
+                data-reveal
+                style={revealStyle(i * 100)}
+                className="group flex flex-col rounded-2xl overflow-hidden bg-dark-200 border border-dark-300
+                           transition-all duration-500 hover:scale-[1.02] hover:border-gold/60"
+              >
+                <div className="relative overflow-hidden aspect-[4/3]">
+                  <img
+                    src={post.imagem_capa}
+                    alt={post.titulo}
+                    loading="lazy"
+                    decoding="async"
+                    onLoad={handlePostLoad}
+                    onError={handlePostLoad}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <span className="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white text-[10px]
+                                   font-body px-2 py-1 rounded-full flex items-center gap-1">
+                    <Calendar size={10} />
+                    {formatDate(post.created_at)}
+                  </span>
+                </div>
+
+                <div className="flex flex-col flex-1 p-4 gap-2">
+                  <h3 className="font-body font-bold text-white text-sm leading-snug line-clamp-2">
+                    {post.titulo}
+                  </h3>
+                  <p className="font-body text-white/50 text-xs leading-relaxed flex-1 line-clamp-3">
+                    {post.excerpt}
+                  </p>
+
+                  <Link
+                    to={`/blog/${post.slug}`}
+                    className="flex items-center gap-2 mt-2 pt-3 border-t border-dark-300 hover:text-gold transition-colors"
+                  >
+                    {post.blog_authors?.foto_url ? (
+                      <img
+                        src={getOptimizedAuthorPhoto(post.blog_authors.foto_url)}
+                        alt={post.blog_authors.nome}
+                        className="w-10 h-10 rounded-full object-cover border border-white/20 group-hover:border-gold/70 transition-colors shrink-0"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-dark-300 border border-white/20 group-hover:border-gold/70 transition-colors flex items-center justify-center shrink-0">
+                        <User size={12} className="text-white/50" />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-body text-white/70 text-xs truncate">{post.blog_authors?.nome || 'Isabel Lucena'}</p>
+                      {post.blog_authors?.profissao && (
+                        <p className="font-body text-white/45 text-[11px] truncate">{post.blog_authors.profissao}</p>
+                      )}
+                    </div>
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          !loading && (
+            <div className="px-5 md:px-8 text-center py-12">
+              <p className="font-body text-white/50">Nenhum post publicado ainda</p>
+            </div>
+          )
+        )}
       </div>
     </section>
   )
