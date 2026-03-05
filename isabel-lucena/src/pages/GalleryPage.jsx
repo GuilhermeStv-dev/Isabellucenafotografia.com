@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Eye, Heart } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
@@ -24,7 +24,9 @@ export default function GalleryPage() {
 
   useEffect(() => {
     if (!categoryId) return
-    ensureCategoryPhotosLoaded(categoryId, { force: true })
+    // Performance optimization: Removed { force: true } to leverage in-memory cache.
+    // Navigation back to previously visited categories is now near-instant as it avoids redundant API calls.
+    ensureCategoryPhotosLoaded(categoryId)
   }, [categoryId, ensureCategoryPhotosLoaded])
 
   useEffect(() => {
@@ -64,8 +66,11 @@ export default function GalleryPage() {
       })
     : null
 
-  const totalViews = categoryPhotos.reduce((s, p) => s + (p.views || 0), 0)
-  const totalLikes = categoryPhotos.reduce((s, p) => s + (p.likes || 0), 0)
+  // Performance optimization: Memoize total metrics to avoid O(N) array reduction on every render.
+  // This is especially beneficial when the component re-renders due to parent updates or other state changes.
+  // Expected Impact: Reduces computation time from O(N_category) to O(1) on re-renders where photos haven't changed.
+  const totalViews = useMemo(() => categoryPhotos.reduce((s, p) => s + (p.views || 0), 0), [categoryPhotos])
+  const totalLikes = useMemo(() => categoryPhotos.reduce((s, p) => s + (p.likes || 0), 0), [categoryPhotos])
 
   return (
     <div className="bg-dark min-h-screen">
