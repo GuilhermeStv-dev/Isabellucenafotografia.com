@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { ChevronLeft, ChevronRight, Heart, Eye, X } from 'lucide-react'
 import PhotoCard from './PhotoCard'
 import BlurImage from './BlurImage'
@@ -124,7 +124,7 @@ function FullscreenViewer({
   )
 }
 
-export default function GalleryGrid({ photos, categoryId, onRegisterView, onToggleLike }) {
+const GalleryGrid = memo(({ photos, categoryId, onRegisterView, onToggleLike }) => {
   const [open, setOpen] = useState(false)
   const [index, setIndex] = useState(0)
   const [visible, setVisible] = useState(CHUNK)
@@ -290,4 +290,6 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
       )}
     </div>
   )
-}
+})
+
+export default GalleryGrid
