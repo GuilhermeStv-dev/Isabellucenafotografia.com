@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ArrowLeft, Eye, Heart } from 'lucide-react'
 import { useGallery } from '../context/GalleryContext'
@@ -64,8 +64,15 @@ export default function GalleryPage() {
       })
     : null
 
-  const totalViews = categoryPhotos.reduce((s, p) => s + (p.views || 0), 0)
-  const totalLikes = categoryPhotos.reduce((s, p) => s + (p.likes || 0), 0)
+  // ⚡ Bolt Optimization:
+  // Memoize total metrics calculation to avoid O(N) reduction on every render.
+  // categoryPhotos is a stable reference from GalleryContext state.
+  const { totalViews, totalLikes } = useMemo(() => {
+    return {
+      totalViews: categoryPhotos.reduce((s, p) => s + (p.views || 0), 0),
+      totalLikes: categoryPhotos.reduce((s, p) => s + (p.likes || 0), 0),
+    }
+  }, [categoryPhotos])
 
   return (
     <div className="bg-dark min-h-screen">
