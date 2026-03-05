@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef, memo } from 'react'
 import { ChevronLeft, ChevronRight, Heart, Eye, X } from 'lucide-react'
 import PhotoCard from './PhotoCard'
 import BlurImage from './BlurImage'
@@ -124,7 +124,12 @@ function FullscreenViewer({
   )
 }
 
-export default function GalleryGrid({ photos, categoryId, onRegisterView, onToggleLike }) {
+/**
+ * GalleryGrid displays a responsive grid of photos with lazy loading.
+ * Optimized with React.memo to prevent full grid re-renders when parent state
+ * (like hero animations in GalleryPage) changes, as long as photos stay the same.
+ */
+function GalleryGrid({ photos, categoryId, onRegisterView, onToggleLike }) {
   const [open, setOpen] = useState(false)
   const [index, setIndex] = useState(0)
   const [visible, setVisible] = useState(CHUNK)
@@ -291,3 +296,5 @@ export default function GalleryGrid({ photos, categoryId, onRegisterView, onTogg
     </div>
   )
 }
+
+export default memo(GalleryGrid)
